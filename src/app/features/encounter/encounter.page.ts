@@ -24,7 +24,9 @@ import { StepVitalsComponent } from './steps/step-vitals.component';
 import { StepHistoryComponent } from './steps/step-history.component';
 import { StepCcHpiComponent } from './steps/step-cc-hpi.component';
 import { StepNoteComponent } from './steps/step-note.component';
-import { StepPlaceholderComponent } from './steps/step-placeholder.component';
+import { StepOrdersComponent } from './steps/step-orders.component';
+import { StepDxCptComponent } from './steps/step-dx-cpt.component';
+import { StepCheckoutComponent } from './steps/step-checkout.component';
 import { VoiceService } from 'src/app/core/services/voice.service';
 
 /**
@@ -43,7 +45,9 @@ import { VoiceService } from 'src/app/core/services/voice.service';
     EncounterStepperComponent, SaveStripComponent, VoiceBarComponent,
     StepVitalsComponent, StepHistoryComponent, StepCcHpiComponent,
     StepNoteComponent,
-    StepPlaceholderComponent,
+    StepOrdersComponent,
+    StepDxCptComponent,
+    StepCheckoutComponent,
   ],
   templateUrl: './encounter.page.html',
   styleUrls: ['./encounter.page.scss'],

@@ -1,0 +1,103 @@
+<div class="pane">
+  <h2 class="title">Checkout</h2>
+  <p class="muted small">Validate the visit before closing. Draft notes will be signed in the next step.</p>
+
+  <!-- Validation grid -->
+  <div class="grid">
+    <div class="cell" [class.ok]="vitalsOk()">
+      <ion-icon [name]="vitalsOk() ? 'checkmark-circle' : 'remove-circle-outline'"></ion-icon>
+      <span>Vitals</span>
+    </div>
+    <div class="cell" [class.ok]="historyOk()">
+      <ion-icon [name]="historyOk() ? 'checkmark-circle' : 'remove-circle-outline'"></ion-icon>
+      <span>History Review</span>
+    </div>
+    <div class="cell" [class.ok]="ccHpiOk()">
+      <ion-icon [name]="ccHpiOk() ? 'checkmark-circle' : 'remove-circle-outline'"></ion-icon>
+      <span>CC &amp; HPI</span>
+    </div>
+    <div class="cell" [class.ok]="ordersCt() > 0">
+      <ion-icon [name]="ordersCt() > 0 ? 'checkmark-circle' : 'remove-circle-outline'"></ion-icon>
+      <span>Orders &amp; Referrals <small>({{ ordersCt() }})</small></span>
+    </div>
+    <div class="cell"
+         [class.ok]="hasAnyNote() && !needsSigning()"
+         [class.warn]="needsSigning()"
+         [class.danger]="!hasAnyNote()">
+      <ion-icon [name]="needsSigning() ? 'alert-circle' : (hasAnyNote() ? 'checkmark-circle' : 'alert-circle')"></ion-icon>
+      @if (!hasAnyNote()) {
+        <span>Clinical Notes <small>· missing</small></span>
+      } @else if (needsSigning()) {
+        <span>Clinical Notes <small>· {{ draftNotes().length }} draft</small></span>
+      } @else {
+        <span>Clinical Notes <small>· signed</small></span>
+      }
+    </div>
+    <div class="cell" [class.ok]="cptCt() > 0" [class.danger]="cptCt() === 0">
+      <ion-icon [name]="cptCt() > 0 ? 'checkmark-circle' : 'alert-circle'"></ion-icon>
+      <span>CPT Codes <small>({{ cptCt() }})</small></span>
+    </div>
+  </div>
+
+  <!-- Blocking alerts -->
+  @if (!hasAnyNote()) {
+    <div class="alert danger">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <div>At least one clinical note is required before closing the encounter.</div>
+    </div>
+  }
+  @if (needsSigning()) {
+    <div class="alert warn">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <div>All clinical notes must be signed before closing. {{ draftNotes().length }} unsigned note(s).</div>
+    </div>
+  }
+  @if (cptCt() === 0) {
+    <div class="alert danger">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <div>CPT codes are required before closing the encounter.</div>
+    </div>
+  }
+
+  <!-- Visit summary -->
+  <section class="summary">
+    <h3>Visit summary</h3>
+    <div class="row"><span>Patient</span><strong>{{ store.appointment()?.patientName ?? '—' }} · MRN {{ store.appointment()?.patientMrn ?? '—' }}</strong></div>
+    <div class="row"><span>Provider</span><strong>{{ providerLine() }}</strong></div>
+    <div class="row"><span>Time</span><strong>{{ visitDuration() }}</strong></div>
+    <div class="row"><span>Dx (ICD)</span><strong>{{ icdCt() }} code(s)</strong></div>
+    <div class="row"><span>CPT</span><strong>{{ cptCt() }} code(s)</strong></div>
+    <div class="row"><span>Notes</span><strong>
+      {{ store.priorNotes().length }} total
+      @if (draftNotes().length > 0) { · {{ draftNotes().length }} draft }
+    </strong></div>
+  </section>
+
+  <!-- Primary actions -->
+  @if (needsSigning()) {
+    <button class="btn primary big" (click)="openSignature()" [disabled]="signing() || cptCt() === 0 || !hasAnyNote()">
+      <ion-icon name="create-outline"></ion-icon> Sign All Notes &amp; Close Encounter
+    </button>
+  } @else if (canClose()) {
+    <button class="btn primary big" (click)="openSignature()" [disabled]="signing()">
+      <ion-icon name="checkmark-circle-outline"></ion-icon> Close Encounter
+    </button>
+  } @else {
+    <button class="btn primary big" (click)="whyCantClose()" disabled>
+      <ion-icon name="lock-closed"></ion-icon> Close Encounter
+    </button>
+  }
+
+  <button class="btn ghost big" (click)="saveAndExit()" [disabled]="signing()">
+    <ion-icon name="arrow-back-outline"></ion-icon> Save &amp; Continue Later
+  </button>
+
+  @if (showSignature()) {
+    <app-signature-sheet
+      title="Sign &amp; Close"
+      subtitle="This signature will be attached to every unsigned note, then the encounter will close."
+      (confirmed)="onSignatureConfirmed($event)"
+      (closed)="closeSignature()"
+    ></app-signature-sheet>
+  }
+</div>

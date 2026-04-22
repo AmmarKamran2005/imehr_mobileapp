@@ -5,9 +5,11 @@ import { debounceTime, filter } from 'rxjs/operators';
 import { AppointmentDetailDto } from '../models/appointment.model';
 import {
   ENCOUNTER_STEPS, EncounterDto, VitalDto,
+  IcdSelection, CptSelection,
   blankVitals, computeBmi,
   defaultStepForRole,
 } from '../models/encounter.model';
+import { CptCode, IcdCode, ICD_MAX } from '../models/codes.model';
 import {
   AllergyDto, FamilyHistoryDto, HistoryCounts, ImmunizationDto,
   MedicationDto, ProblemDto, SocialHistoryDto,
@@ -17,12 +19,15 @@ import {
   ClinicalNoteDto, NoteSections, NoteStatus, NoteType,
   blankSections, htmlToSections, sectionsToHtml,
 } from '../models/clinical-note.model';
+import { OrderDto } from '../models/orders.model';
 
 import { AppointmentsService } from './appointments.service';
 import { EncounterService } from './encounter.service';
 import { VitalsService } from './vitals.service';
 import { PatientHistoryService } from './patient-history.service';
 import { ClinicalNotesService } from './clinical-notes.service';
+import { OrdersService } from './orders.service';
+import { CodesService } from './codes.service';
 import { AuthService } from '../auth/auth.service';
 import { LoggerService } from '../logger/logger.service';
 import { ProcessChunkResponse } from '../models/voice.model';
@@ -51,6 +56,8 @@ export class EncounterStore {
   private readonly vitalsApi = inject(VitalsService);
   private readonly historyApi = inject(PatientHistoryService);
   private readonly notesApi = inject(ClinicalNotesService);
+  private readonly ordersApi = inject(OrdersService);
+  private readonly codesApi = inject(CodesService);
   private readonly auth = inject(AuthService);
   private readonly log = inject(LoggerService);
 
@@ -85,6 +92,19 @@ export class EncounterStore {
   readonly noteSections  = signal<NoteSections>(blankSections());
   /** All notes tied to this appointment — for the "prior notes" chip list. */
   readonly priorNotes    = signal<ClinicalNoteDto[]>([]);
+
+  // Orders (Step 4). Scoped to this appointment.
+  readonly orders = signal<OrderDto[]>([]);
+
+  // Dx & CPT (Step 5). Live local state — server echo into encounter row.
+  readonly icdSelections = signal<IcdSelection[]>([]);
+  readonly cptSelections = signal<CptSelection[]>([]);
+  readonly icdSuggestions = signal<IcdCode[]>([]);
+  readonly cptSuggestions = signal<CptCode[]>([]);
+  readonly icdFavorites = signal<IcdCode[]>([]);
+  readonly cptFavorites = signal<CptCode[]>([]);
+  readonly suggestingIcd = signal<boolean>(false);
+  readonly suggestingCpt = signal<boolean>(false);
 
   readonly step = signal<number>(0);
   readonly completed = signal<boolean[]>(new Array(ENCOUNTER_STEPS.length).fill(false));
@@ -142,6 +162,7 @@ export class EncounterStore {
         vitalsList,
         allergies, medications, problems, family, social, imm,
         notesForAppt,
+        ordersForAppt,
       ] = await Promise.all([
         this.vitalsApi.list(appt.patientId),
         this.historyApi.listAllergies(appt.patientId),
@@ -151,6 +172,7 @@ export class EncounterStore {
         this.historyApi.listSocialHistory(appt.patientId),
         this.historyApi.listImmunizations(appt.patientId),
         this.notesApi.byAppointment(appt.appointmentId),
+        this.ordersApi.list({ patientId: appt.patientId, appointmentId: appt.appointmentId }),
       ]);
 
       this.historicalVitals.set(vitalsList);
@@ -183,6 +205,20 @@ export class EncounterStore {
         this.noteSections.set(blankSections());
       }
 
+      this.orders.set(ordersForAppt);
+
+      // Dx / CPT from the encounter row (arrays live on the Encounter).
+      this.icdSelections.set(enc?.icdSelections ?? []);
+      this.cptSelections.set(enc?.cptSelections ?? []);
+
+      // Favorites load lazily in the background — no need to block the step.
+      void this.codesApi.favorites('ICD10').then((rows) =>
+        this.icdFavorites.set(rows.map((r) => ({ code: r.code, description: r.description }))),
+      );
+      void this.codesApi.favorites('CPT').then((rows) =>
+        this.cptFavorites.set(rows.map((r) => ({ cptCode: r.code, description: r.description }))),
+      );
+
       this.recomputeCompleted();
 
       const role = this.auth.user()?.role ?? UserRole.Clinician;
@@ -207,6 +243,13 @@ export class EncounterStore {
     this.priorNotes.set([]);
     this.noteType.set(NoteType.SoapNote);
     this.noteSections.set(blankSections());
+    this.orders.set([]);
+    this.icdSelections.set([]);
+    this.cptSelections.set([]);
+    this.icdSuggestions.set([]);
+    this.cptSuggestions.set([]);
+    this.icdFavorites.set([]);
+    this.cptFavorites.set([]);
     this.step.set(0);
     this.completed.set(new Array(ENCOUNTER_STEPS.length).fill(false));
     this.saveStatus.set('idle');
@@ -388,6 +431,177 @@ export class EncounterStore {
   }
 
   /* ============================================================
+     Public: Step 4 — orders
+     ============================================================ */
+  async addOrder(body: { category: OrderDto['category']; name: string; notes?: string; priority?: string }): Promise<void> {
+    const appt = this.appointment();
+    const enc  = this.encounter();
+    if (!appt) return;
+    this.saveStatus.set('saving');
+    const created = await this.ordersApi.create({
+      patientId: appt.patientId,
+      appointmentId: appt.appointmentId,
+      encounterId: enc?.encounterId,
+      providerId: appt.providerId ?? this.auth.user()?.providerId ?? undefined,
+      category: body.category,
+      name: body.name,
+      notes: body.notes,
+      priority: body.priority,
+    });
+    if (created) this.orders.update((list) => [created, ...list]);
+    this.markSaved();
+    this.recomputeCompleted();
+  }
+
+  async completeOrder(id: number): Promise<void> {
+    this.saveStatus.set('saving');
+    const updated = await this.ordersApi.complete(id);
+    if (updated) this.orders.update((list) => list.map((o) => o.orderId === id ? updated : o));
+    this.markSaved();
+  }
+
+  async removeOrder(id: number): Promise<void> {
+    this.saveStatus.set('saving');
+    const ok = await this.ordersApi.remove(id);
+    if (ok) this.orders.update((list) => list.filter((o) => o.orderId !== id));
+    this.markSaved();
+    this.recomputeCompleted();
+  }
+
+  /* ============================================================
+     Public: Step 5 — Dx & CPT
+     ============================================================ */
+
+  /** Returns true if an ICD code is already in the selection list. */
+  hasIcd(code: string): boolean {
+    return this.icdSelections().some((s) => s.code === code);
+  }
+
+  hasCpt(code: string): boolean {
+    return this.cptSelections().some((s) => s.cptCode === code);
+  }
+
+  /** Add an ICD selection. Enforces CMS-1500 cap of 12; no-op if already present. */
+  addIcd(row: { code: string; description?: string; aiSuggested?: boolean }): boolean {
+    if (this.hasIcd(row.code)) return false;
+    if (this.icdSelections().length >= ICD_MAX) return false;
+    this.icdSelections.update((list) => [...list, {
+      code: row.code,
+      description: row.description,
+      aiSuggested: !!row.aiSuggested,
+    }]);
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+    // When the ICD set changes, refresh CPT suggestions (they depend on the Dx).
+    void this.refreshCptSuggestions();
+    return true;
+  }
+
+  removeIcdAt(index: number): void {
+    this.icdSelections.update((list) => list.filter((_, i) => i !== index));
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+    void this.refreshCptSuggestions();
+  }
+
+  /** Move an ICD row up/down — priority letter is just its position. */
+  moveIcd(from: number, to: number): void {
+    const list = [...this.icdSelections()];
+    if (from < 0 || to < 0 || from >= list.length || to >= list.length) return;
+    const [row] = list.splice(from, 1);
+    list.splice(to, 0, row);
+    this.icdSelections.set(list);
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+  }
+
+  addCpt(row: { cptCode: string; description?: string; units?: number; aiSuggested?: boolean }): boolean {
+    if (this.hasCpt(row.cptCode)) return false;
+    this.cptSelections.update((list) => [...list, {
+      cptCode: row.cptCode,
+      description: row.description,
+      units: row.units ?? 1,
+      aiSuggested: !!row.aiSuggested,
+    }]);
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+    return true;
+  }
+
+  updateCptUnits(cptCode: string, units: number): void {
+    const u = Math.max(1, Math.floor(units || 1));
+    this.cptSelections.update((list) =>
+      list.map((s) => (s.cptCode === cptCode ? { ...s, units: u } : s)),
+    );
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+  }
+
+  removeCpt(cptCode: string): void {
+    this.cptSelections.update((list) => list.filter((s) => s.cptCode !== cptCode));
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+  }
+
+  /** Auto-refresh on step entry / after ICD changes. Fire-and-forget. */
+  async refreshIcdSuggestions(): Promise<void> {
+    const appt = this.appointment();
+    if (!appt) return;
+    this.suggestingIcd.set(true);
+    try {
+      const rows = await this.codesApi.suggestIcd(appt.appointmentId);
+      this.icdSuggestions.set(rows);
+    } finally {
+      this.suggestingIcd.set(false);
+    }
+  }
+
+  async refreshCptSuggestions(): Promise<void> {
+    const appt = this.appointment();
+    if (!appt) return;
+    if (this.icdSelections().length === 0) {
+      this.cptSuggestions.set([]);
+      return;
+    }
+    this.suggestingCpt.set(true);
+    try {
+      const rows = await this.codesApi.suggestCpt(appt.appointmentId);
+      this.cptSuggestions.set(rows);
+    } finally {
+      this.suggestingCpt.set(false);
+    }
+  }
+
+  async toggleIcdFavorite(code: string, description: string): Promise<void> {
+    const has = this.icdFavorites().some((f) => f.code === code);
+    if (has) {
+      await this.codesApi.removeFavorite('ICD10', code);
+      this.icdFavorites.update((list) => list.filter((f) => f.code !== code));
+    } else {
+      await this.codesApi.addFavorite({ codeType: 'ICD10', code, description });
+      this.icdFavorites.update((list) => [...list, { code, description }]);
+    }
+  }
+
+  async toggleCptFavorite(code: string, description: string): Promise<void> {
+    const has = this.cptFavorites().some((f) => f.cptCode === code);
+    if (has) {
+      await this.codesApi.removeFavorite('CPT', code);
+      this.cptFavorites.update((list) => list.filter((f) => f.cptCode !== code));
+    } else {
+      await this.codesApi.addFavorite({ codeType: 'CPT', code, description });
+      this.cptFavorites.update((list) => [...list, { cptCode: code, description }]);
+    }
+  }
+
+  /** DB search for family overlay (e.g. "E78.x"). */
+  searchIcdByPrefix(prefix: string): Promise<IcdCode[]> {
+    return this.codesApi.searchIcd(prefix, 20);
+  }
+  searchIcd(q: string): Promise<IcdCode[]> { return this.codesApi.searchIcd(q, 20); }
+  searchCpt(q: string): Promise<CptCode[]> { return this.codesApi.searchCpt(q, 20); }
+
+  /* ============================================================
      Public: Voice Bar hook — called by VoiceService per chunk.
      ============================================================ */
   applyVoiceChunk(resp: ProcessChunkResponse): void {
@@ -508,6 +722,8 @@ export class EncounterStore {
       const saved = await this.encountersApi.update(appt.patientId, enc.encounterId, {
         chiefComplaint: enc.chiefComplaint,
         historyOfPresentIllness: enc.historyOfPresentIllness,
+        icdSelections: this.icdSelections(),
+        cptSelections: this.cptSelections(),
       });
       if (saved) this.encounter.set({ ...enc, ...saved });
       this.markSaved();
@@ -533,7 +749,9 @@ export class EncounterStore {
     marks[1] = this.hasAnyHistory();
     marks[2] = !!(this.encounter()?.chiefComplaint) || !!(this.encounter()?.historyOfPresentIllness);
     marks[3] = !!this.clinicalNote() || hasAnyNoteContent(this.noteSections());
-    // marks[4..7] — later phases
+    marks[4] = this.orders().length > 0;
+    marks[5] = this.cptSelections().length > 0;
+    // marks[6] — Checkout (last phase)
     this.completed.set(marks);
   }
 

@@ -1,0 +1,312 @@
+<div class="pane">
+  <h2 class="title">Dx &amp; CPT Codes</h2>
+
+  <!-- Selected codes card -->
+  <section class="selected">
+    <header>
+      <h3>Selected</h3>
+      <span class="muted small">
+        <strong [class.over]="icdSelections().length >= ICD_MAX">{{ icdSelections().length }}</strong>/{{ ICD_MAX }} ICD
+        · {{ cptSelections().length }} CPT
+      </span>
+    </header>
+
+    <!-- ICD rows with priority letters + reorder controls -->
+    <div class="group">
+      <p class="sec-title">ICD-10 <span class="muted-soft">(order = priority)</span></p>
+      @if (icdSelections().length === 0) {
+        <p class="empty">No diagnoses selected yet.</p>
+      } @else {
+        <ul class="chips">
+          @for (s of icdSelections(); let i = $index; track s.code) {
+            <li class="chip" [class.ai]="s.aiSuggested">
+              <span class="letter">{{ priorityLetter(i) }}</span>
+              <span class="code">{{ s.code }}</span>
+              <span class="desc">{{ s.description }}</span>
+              <span class="chip-actions">
+                <button class="mini" (click)="moveIcd(i, -1)" [disabled]="i === 0" aria-label="Move up">
+                  <ion-icon name="chevron-up-outline"></ion-icon>
+                </button>
+                <button class="mini" (click)="moveIcd(i, 1)" [disabled]="i === icdSelections().length - 1" aria-label="Move down">
+                  <ion-icon name="chevron-down-outline"></ion-icon>
+                </button>
+                <button class="mini danger" (click)="removeIcd(i)" aria-label="Remove">
+                  <ion-icon name="close"></ion-icon>
+                </button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="group">
+      <p class="sec-title">CPT <span class="muted-soft">(no cap · units per row)</span></p>
+      @if (cptSelections().length === 0) {
+        <p class="empty">No procedures selected yet.</p>
+      } @else {
+        <ul class="chips cpt">
+          @for (s of cptSelections(); track s.cptCode) {
+            <li class="chip" [class.ai]="s.aiSuggested">
+              <span class="code">{{ s.cptCode }}</span>
+              <span class="desc">{{ s.description }}</span>
+              <label class="units">
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  max="99"
+                  [value]="s.units ?? 1"
+                  (change)="updateUnits(s.cptCode, $any($event.target).value)"
+                />
+                <span>×</span>
+              </label>
+              <button class="mini danger" (click)="removeCpt(s.cptCode)" aria-label="Remove">
+                <ion-icon name="close"></ion-icon>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </section>
+
+  <!-- Segmented tabs -->
+  <div class="seg">
+    <button [class.active]="tab() === 'icd'" (click)="pickTab('icd')">ICD-10</button>
+    <button [class.active]="tab() === 'cpt'" (click)="pickTab('cpt')">CPT</button>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search imehr-field">
+    <ion-icon name="search-outline"></ion-icon>
+    <input
+      type="search"
+      placeholder="Search codes or descriptions"
+      [ngModel]="query()"
+      (ngModelChange)="onQueryChange($event)"
+    />
+  </div>
+
+  <!-- ICD TAB -->
+  @if (tab() === 'icd') {
+
+    <!-- Search results -->
+    @if (query().length >= 2) {
+      <div class="sec-head">
+        <p class="sec-title"><ion-icon name="search-outline" class="ai-ico"></ion-icon> Search results</p>
+      </div>
+      @if (searching()) {
+        <p class="muted small">Searching…</p>
+      } @else if (icdResults().length === 0) {
+        <p class="muted small">No results for "{{ query() }}"</p>
+      } @else {
+        <ul class="ai-list">
+          @for (r of icdResults(); track r.code) {
+            <li>
+              <span class="code-pill">{{ r.code }}</span>
+              <div class="ac-body">
+                <p>{{ r.description }}</p>
+              </div>
+              @if (isIcdFav(r.code)) {
+                <button class="star on" (click)="toggleIcdFav(r.code, r.description)" aria-label="Unfavorite">
+                  <ion-icon name="star"></ion-icon>
+                </button>
+              } @else {
+                <button class="star" (click)="toggleIcdFav(r.code, r.description)" aria-label="Favorite">
+                  <ion-icon name="star-outline"></ion-icon>
+                </button>
+              }
+              @if (store.hasIcd(r.code)) {
+                <span class="added-lbl">Added</span>
+              } @else {
+                <button class="add-btn" (click)="addIcd(r)" [disabled]="!canAddIcd()">+ Add</button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+
+    <!-- AI suggestions -->
+    <div class="sec-head">
+      <p class="sec-title"><ion-icon name="sparkles-outline" class="ai-ico"></ion-icon> AI suggestions <span class="muted small">based on your note</span></p>
+      <button class="txt-btn sm" (click)="refresh()" aria-label="Refresh">
+        <ion-icon name="refresh-outline"></ion-icon>
+      </button>
+    </div>
+    @if (store.suggestingIcd()) {
+      <p class="muted small">Thinking…</p>
+    } @else if (icdSuggestions().length === 0) {
+      <p class="muted small">No suggestions yet.</p>
+    } @else {
+      <ul class="ai-list">
+        @for (s of icdSuggestions(); track s.code) {
+          <li>
+            <span class="code-pill">{{ s.code }}</span>
+            <div class="ac-body">
+              <p>{{ s.description }}</p>
+              @if (s.rationale) { <p class="muted small">{{ s.rationale }}</p> }
+              <button class="family-pill" (click)="openFamily(familyFor(s.code))">{{ familyFor(s.code) }}.x ▾</button>
+            </div>
+            <span class="conf" [class]="confidenceBucket(s.confidence)">{{ s.confidence ?? '—' }}%</span>
+            @if (store.hasIcd(s.code)) {
+              <span class="added-lbl">Added</span>
+            } @else {
+              <button class="add-btn" (click)="addIcd(s)" [disabled]="!canAddIcd()">+ Add</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- Family overlay -->
+    @if (familyPrefix(); as prefix) {
+      <div class="family-overlay">
+        <div class="fo-head">
+          <span class="code-pill">{{ prefix }}.x</span>
+          <span class="muted small">{{ familyCodes().length }} codes</span>
+          <button class="icon-btn" (click)="closeFamily()" aria-label="Close">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+        @if (familyCodes().length === 0) {
+          <p class="muted small">No codes in this family.</p>
+        } @else {
+          <ul class="ai-list inner">
+            @for (f of familyCodes(); track f.code) {
+              <li>
+                <span class="code-pill">{{ f.code }}</span>
+                <div class="ac-body"><p>{{ f.description }}</p></div>
+                @if (store.hasIcd(f.code)) {
+                  <span class="added-lbl">Added</span>
+                } @else {
+                  <button class="add-btn" (click)="addIcd(f)" [disabled]="!canAddIcd()">+ Add</button>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    <!-- Favorites -->
+    <div class="sec-head">
+      <p class="sec-title"><ion-icon name="star" class="fav-ico"></ion-icon> Your favorites</p>
+    </div>
+    @if (icdFavorites().length === 0) {
+      <p class="muted small">Star codes from suggestions or search to save them here.</p>
+    } @else {
+      <ul class="ai-list compact">
+        @for (f of icdFavorites(); track f.code) {
+          <li>
+            <span class="code-pill">{{ f.code }}</span>
+            <div class="ac-body"><p>{{ f.description }}</p></div>
+            <button class="star on" (click)="toggleIcdFav(f.code, f.description)" aria-label="Unfavorite">
+              <ion-icon name="star"></ion-icon>
+            </button>
+            @if (store.hasIcd(f.code)) {
+              <span class="added-lbl">Added</span>
+            } @else {
+              <button class="add-btn" (click)="addIcd(f)" [disabled]="!canAddIcd()">+ Add</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+
+  <!-- CPT TAB -->
+  @if (tab() === 'cpt') {
+
+    @if (query().length >= 2) {
+      <div class="sec-head">
+        <p class="sec-title"><ion-icon name="search-outline" class="ai-ico"></ion-icon> Search results</p>
+      </div>
+      @if (searching()) {
+        <p class="muted small">Searching…</p>
+      } @else if (cptResults().length === 0) {
+        <p class="muted small">No results for "{{ query() }}"</p>
+      } @else {
+        <ul class="ai-list">
+          @for (r of cptResults(); track r.cptCode) {
+            <li>
+              <span class="code-pill">{{ r.cptCode }}</span>
+              <div class="ac-body"><p>{{ r.description }}</p></div>
+              @if (isCptFav(r.cptCode)) {
+                <button class="star on" (click)="toggleCptFav(r.cptCode, r.description)" aria-label="Unfavorite">
+                  <ion-icon name="star"></ion-icon>
+                </button>
+              } @else {
+                <button class="star" (click)="toggleCptFav(r.cptCode, r.description)" aria-label="Favorite">
+                  <ion-icon name="star-outline"></ion-icon>
+                </button>
+              }
+              @if (store.hasCpt(r.cptCode)) {
+                <span class="added-lbl">Added</span>
+              } @else {
+                <button class="add-btn" (click)="addCpt(r)">+ Add</button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+
+    <div class="sec-head">
+      <p class="sec-title"><ion-icon name="sparkles-outline" class="ai-ico"></ion-icon> AI suggestions <span class="muted small">based on your diagnoses</span></p>
+      <button class="txt-btn sm" (click)="refresh()">
+        <ion-icon name="refresh-outline"></ion-icon>
+      </button>
+    </div>
+    @if (icdSelections().length === 0) {
+      <p class="muted small">Add at least one ICD-10 first — CPT suggestions key off your diagnoses.</p>
+    } @else if (store.suggestingCpt()) {
+      <p class="muted small">Thinking…</p>
+    } @else if (cptSuggestions().length === 0) {
+      <p class="muted small">No suggestions yet.</p>
+    } @else {
+      <ul class="ai-list">
+        @for (s of cptSuggestions(); track s.cptCode) {
+          <li>
+            <span class="code-pill">{{ s.cptCode }}</span>
+            <div class="ac-body">
+              <p>{{ s.description }}</p>
+              @if (s.rationale) { <p class="muted small">{{ s.rationale }}</p> }
+            </div>
+            <span class="conf" [class]="confidenceBucket(s.confidence)">{{ s.confidence ?? '—' }}%</span>
+            @if (store.hasCpt(s.cptCode)) {
+              <span class="added-lbl">Added</span>
+            } @else {
+              <button class="add-btn" (click)="addCpt(s)">+ Add</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <div class="sec-head">
+      <p class="sec-title"><ion-icon name="star" class="fav-ico"></ion-icon> Your favorites</p>
+    </div>
+    @if (cptFavorites().length === 0) {
+      <p class="muted small">Star codes from suggestions or search to save them here.</p>
+    } @else {
+      <ul class="ai-list compact">
+        @for (f of cptFavorites(); track f.cptCode) {
+          <li>
+            <span class="code-pill">{{ f.cptCode }}</span>
+            <div class="ac-body"><p>{{ f.description }}</p></div>
+            <button class="star on" (click)="toggleCptFav(f.cptCode, f.description)" aria-label="Unfavorite">
+              <ion-icon name="star"></ion-icon>
+            </button>
+            @if (store.hasCpt(f.cptCode)) {
+              <span class="added-lbl">Added</span>
+            } @else {
+              <button class="add-btn" (click)="addCpt(f)">+ Add</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

@@ -46,29 +46,9 @@
         @case (1) { <app-step-history></app-step-history> }
         @case (2) { <app-step-cc-hpi></app-step-cc-hpi> }
         @case (3) { <app-step-note></app-step-note> }
-        @case (4) {
-          <app-step-placeholder
-            title="Orders & Referrals"
-            icon="clipboard-outline"
-            phase="Arrives in Phase 6"
-          ></app-step-placeholder>
-        }
-        @case (5) {
-          <app-step-placeholder
-            title="Dx & CPT Codes"
-            icon="pricetags-outline"
-            phase="Arrives in Phase 6"
-            note="AI suggestions, family overlay, favorites, ICD-10 cap of 12, CPT units inline."
-          ></app-step-placeholder>
-        }
-        @case (6) {
-          <app-step-placeholder
-            title="Checkout"
-            icon="checkmark-circle-outline"
-            phase="Arrives in Phase 7"
-            note="Validation checklist, Sign All Notes & Close Encounter, Save & Continue Later."
-          ></app-step-placeholder>
-        }
+        @case (4) { <app-step-orders></app-step-orders> }
+        @case (5) { <app-step-dx-cpt></app-step-dx-cpt> }
+        @case (6) { <app-step-checkout></app-step-checkout> }
       }
     </div>
   }
