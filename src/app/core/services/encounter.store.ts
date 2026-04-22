@@ -12,18 +12,23 @@ import {
   AllergyDto, FamilyHistoryDto, HistoryCounts, ImmunizationDto,
   MedicationDto, ProblemDto, SocialHistoryDto,
 } from '../models/history.model';
-import { UserRole } from '../models/user.model';
+import { UserRole, isClinicianRole } from '../models/user.model';
+import {
+  ClinicalNoteDto, NoteSections, NoteStatus, NoteType,
+  blankSections, htmlToSections, sectionsToHtml,
+} from '../models/clinical-note.model';
 
 import { AppointmentsService } from './appointments.service';
 import { EncounterService } from './encounter.service';
 import { VitalsService } from './vitals.service';
 import { PatientHistoryService } from './patient-history.service';
+import { ClinicalNotesService } from './clinical-notes.service';
 import { AuthService } from '../auth/auth.service';
 import { LoggerService } from '../logger/logger.service';
 import { ProcessChunkResponse } from '../models/voice.model';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
-type SaveKind = 'vitals' | 'encounter';
+type SaveKind = 'vitals' | 'encounter' | 'note';
 
 /**
  * Central reactive store for an ACTIVE encounter session.
@@ -45,6 +50,7 @@ export class EncounterStore {
   private readonly encountersApi = inject(EncounterService);
   private readonly vitalsApi = inject(VitalsService);
   private readonly historyApi = inject(PatientHistoryService);
+  private readonly notesApi = inject(ClinicalNotesService);
   private readonly auth = inject(AuthService);
   private readonly log = inject(LoggerService);
 
@@ -73,6 +79,13 @@ export class EncounterStore {
     immunizations: this.immunizations().length,
   }));
 
+  // Clinical note state (Step 3).
+  readonly clinicalNote  = signal<ClinicalNoteDto | null>(null);
+  readonly noteType      = signal<NoteType>(NoteType.SoapNote);
+  readonly noteSections  = signal<NoteSections>(blankSections());
+  /** All notes tied to this appointment — for the "prior notes" chip list. */
+  readonly priorNotes    = signal<ClinicalNoteDto[]>([]);
+
   readonly step = signal<number>(0);
   readonly completed = signal<boolean[]>(new Array(ENCOUNTER_STEPS.length).fill(false));
 
@@ -100,6 +113,11 @@ export class EncounterStore {
       debounceTime(1200),
     ).subscribe(() => void this.flushEncounter());
 
+    this.saveSubject.pipe(
+      filter((k) => k === 'note'),
+      debounceTime(1200),
+    ).subscribe(() => void this.flushNote());
+
     // Auto-reset once the user logs out
     effect(() => {
       if (!this.auth.isAuthenticated()) this.reset();
@@ -123,6 +141,7 @@ export class EncounterStore {
       const [
         vitalsList,
         allergies, medications, problems, family, social, imm,
+        notesForAppt,
       ] = await Promise.all([
         this.vitalsApi.list(appt.patientId),
         this.historyApi.listAllergies(appt.patientId),
@@ -131,6 +150,7 @@ export class EncounterStore {
         this.historyApi.listFamilyHistory(appt.patientId),
         this.historyApi.listSocialHistory(appt.patientId),
         this.historyApi.listImmunizations(appt.patientId),
+        this.notesApi.byAppointment(appt.appointmentId),
       ]);
 
       this.historicalVitals.set(vitalsList);
@@ -145,6 +165,23 @@ export class EncounterStore {
       this.familyHistory.set(family);
       this.socialHistory.set(social);
       this.immunizations.set(imm);
+
+      // Clinical note — prefer the most recent editable Draft by the current user
+      // (or any Draft). Falls back to null so the user starts a fresh note.
+      this.priorNotes.set(notesForAppt);
+      const uid = this.auth.user()?.userId;
+      const editable = notesForAppt.find(
+        (n) => n.status === NoteStatus.Draft && (!uid || n.providerId === uid || n.providerId == null),
+      ) ?? null;
+      if (editable) {
+        this.clinicalNote.set(editable);
+        this.noteType.set(editable.type);
+        this.noteSections.set(htmlToSections(editable.htmlContent));
+      } else {
+        this.clinicalNote.set(null);
+        this.noteType.set(NoteType.SoapNote);
+        this.noteSections.set(blankSections());
+      }
 
       this.recomputeCompleted();
 
@@ -166,6 +203,10 @@ export class EncounterStore {
     this.familyHistory.set([]);
     this.socialHistory.set([]);
     this.immunizations.set([]);
+    this.clinicalNote.set(null);
+    this.priorNotes.set([]);
+    this.noteType.set(NoteType.SoapNote);
+    this.noteSections.set(blankSections());
     this.step.set(0);
     this.completed.set(new Array(ENCOUNTER_STEPS.length).fill(false));
     this.saveStatus.set('idle');
@@ -323,6 +364,30 @@ export class EncounterStore {
   }
 
   /* ============================================================
+     Public: Step 3 — clinical note
+     ============================================================ */
+  canEditNote(): boolean {
+    const r = this.auth.user()?.role;
+    return r != null && isClinicianRole(r);
+  }
+
+  setNoteType(t: NoteType): void {
+    if (this.noteType() === t) return;
+    this.noteType.set(t);
+    this.saveStatus.set('saving');
+    this.saveSubject.next('note');
+  }
+
+  patchNote(patch: Partial<NoteSections>): void {
+    if (!this.canEditNote()) return;
+    const cur = this.noteSections();
+    const merged = { ...cur, ...patch };
+    this.noteSections.set(merged);
+    this.saveStatus.set('saving');
+    this.saveSubject.next('note');
+  }
+
+  /* ============================================================
      Public: Voice Bar hook — called by VoiceService per chunk.
      ============================================================ */
   applyVoiceChunk(resp: ProcessChunkResponse): void {
@@ -352,6 +417,26 @@ export class EncounterStore {
     if (cc != null)  patch.chiefComplaint = cc;
     if (hpi != null) patch.historyOfPresentIllness = hpi;
     if (Object.keys(patch).length > 0) this.patchCcHpi(patch);
+
+    // Clinical note (tabKey='note') extraction — either per-section fields or
+    // a full htmlContent drafted by the server.
+    const raw = d as Record<string, unknown>;
+    const notePatch: Partial<NoteSections> = {};
+    for (const key of ['subjective', 'objective', 'assessment', 'plan'] as const) {
+      const v = raw[key] ?? raw[toTitle(key)];
+      if (typeof v === 'string' && v.trim().length > 0) notePatch[key] = v;
+    }
+    const draftedHtml = stringOrNull(raw['htmlContent']) ?? stringOrNull(raw['HtmlContent']);
+    if (draftedHtml) {
+      const parsed = htmlToSections(draftedHtml);
+      if (!notePatch.subjective  && parsed.subjective)  notePatch.subjective  = parsed.subjective;
+      if (!notePatch.objective   && parsed.objective)   notePatch.objective   = parsed.objective;
+      if (!notePatch.assessment  && parsed.assessment)  notePatch.assessment  = parsed.assessment;
+      if (!notePatch.plan        && parsed.plan)        notePatch.plan        = parsed.plan;
+    }
+    if (Object.keys(notePatch).length > 0 && this.canEditNote()) {
+      this.patchNote(notePatch);
+    }
   }
 
   /* ============================================================
@@ -367,6 +452,50 @@ export class EncounterStore {
       this.recomputeCompleted();
     } catch (e) {
       this.log.warn('EncounterStore', 'flushVitals failed', e);
+      this.saveStatus.set('error');
+    }
+  }
+
+  private async flushNote(): Promise<void> {
+    if (!this.canEditNote()) return;
+    try {
+      const appt = this.appointment();
+      const enc  = this.encounter();
+      if (!appt) return;
+
+      const html = sectionsToHtml(this.noteSections());
+      const existing = this.clinicalNote();
+
+      if (existing) {
+        const updated = await this.notesApi.update(existing.clinicalNoteId, {
+          htmlContent: html,
+          type: this.noteType(),
+        });
+        if (updated) this.clinicalNote.set({ ...existing, ...updated });
+      } else {
+        // Don't POST a totally empty note.
+        if (!hasAnyNoteContent(this.noteSections())) {
+          this.saveStatus.set('idle');
+          return;
+        }
+        const created = await this.notesApi.create({
+          patientId: appt.patientId,
+          appointmentId: appt.appointmentId,
+          encounterId: enc?.encounterId,
+          providerId: appt.providerId ?? this.auth.user()?.providerId ?? undefined,
+          type: this.noteType(),
+          status: NoteStatus.Draft,
+          htmlContent: html,
+        });
+        if (created) {
+          this.clinicalNote.set(created);
+          this.priorNotes.update((list) => [created, ...list]);
+        }
+      }
+      this.markSaved();
+      this.recomputeCompleted();
+    } catch (e) {
+      this.log.warn('EncounterStore', 'flushNote failed', e);
       this.saveStatus.set('error');
     }
   }
@@ -403,7 +532,8 @@ export class EncounterStore {
     marks[0] = hasAnyVital(this.vitals());
     marks[1] = this.hasAnyHistory();
     marks[2] = !!(this.encounter()?.chiefComplaint) || !!(this.encounter()?.historyOfPresentIllness);
-    // marks[3..7] — later phases
+    marks[3] = !!this.clinicalNote() || hasAnyNoteContent(this.noteSections());
+    // marks[4..7] — later phases
     this.completed.set(marks);
   }
 
@@ -438,6 +568,10 @@ function hasAnyVital(v: VitalDto | null): boolean {
     v.systolicBp, v.diastolicBp, v.heartRate, v.temperature,
     v.spo2, v.respiratoryRate, v.weight, v.height, v.painScore,
   ].some((x) => x != null);
+}
+
+function hasAnyNoteContent(s: NoteSections): boolean {
+  return (s.subjective + s.objective + s.assessment + s.plan).trim().length > 0;
 }
 
 function stringOrNull(x: unknown): string | null {

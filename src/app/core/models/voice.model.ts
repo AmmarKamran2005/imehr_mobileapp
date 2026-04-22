@@ -3,8 +3,9 @@
    Matches ehr-system/Controllers/MedocsVoiceController.cs ProcessChunk().
    ============================================================ */
 
-/** Which step's voice bar is sending — drives server-side extraction. */
-export type VoiceTabKey = 'vitals' | 'history' | 'cc-hpi' | 'telehealth';
+/** Which step's voice bar is sending — drives server-side extraction.
+ *  `note` is used by the Clinical Note step's "Record Session" dictation. */
+export type VoiceTabKey = 'vitals' | 'history' | 'cc-hpi' | 'note' | 'telehealth';
 
 export interface ProcessChunkRequest {
   /** Multipart file — caller builds FormData. */

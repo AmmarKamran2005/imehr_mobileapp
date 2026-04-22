@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -23,6 +23,7 @@ import { VoiceBarComponent } from './components/voice-bar.component';
 import { StepVitalsComponent } from './steps/step-vitals.component';
 import { StepHistoryComponent } from './steps/step-history.component';
 import { StepCcHpiComponent } from './steps/step-cc-hpi.component';
+import { StepNoteComponent } from './steps/step-note.component';
 import { StepPlaceholderComponent } from './steps/step-placeholder.component';
 import { VoiceService } from 'src/app/core/services/voice.service';
 
@@ -41,6 +42,7 @@ import { VoiceService } from 'src/app/core/services/voice.service';
     IonContent, IonSpinner, IonIcon,
     EncounterStepperComponent, SaveStripComponent, VoiceBarComponent,
     StepVitalsComponent, StepHistoryComponent, StepCcHpiComponent,
+    StepNoteComponent,
     StepPlaceholderComponent,
   ],
   templateUrl: './encounter.page.html',
@@ -89,6 +91,26 @@ export class EncounterPage implements OnInit, OnDestroy {
     if (def.key === 'cc-hpi')  return 'cc-hpi';
     return null;
   });
+
+  constructor() {
+    // If the user switches step while a recording is in flight for a *different*
+    // tab (e.g. they hit Record Session on step 3 then jumped back to step 0),
+    // cancel the recorder so the mic is released and we don't accumulate
+    // orphaned chunks routed to the wrong tabKey.
+    effect(() => {
+      const stepKey = ENCOUNTER_STEPS[this.currentStep()]?.key;
+      const session = this.voice.session();
+      if (!session) return;
+      const compatible =
+        (session.tabKey === 'vitals'  && stepKey === 'vitals') ||
+        (session.tabKey === 'history' && stepKey === 'history') ||
+        (session.tabKey === 'cc-hpi'  && stepKey === 'cc-hpi') ||
+        (session.tabKey === 'note'    && stepKey === 'note');
+      if (!compatible) {
+        void this.voice.cancel();
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     const id = Number(this.route.snapshot.paramMap.get('appointmentId'));
