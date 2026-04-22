@@ -2620,8 +2620,38 @@ html[data-theme="dark"] .active-visit-banner {
 .vh-row .vh-date { color: var(--text-3); font-size: 12px; }
 
 /* ============================================================
-   v5: Amendment / Addendum + scroll fixes
+   v5: Amendment / Addendum + scroll fixes + appt-actions
    ============================================================ */
+
+/* Appointment card right column (status chip + action button) */
+.appt-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 86px;
+}
+.appt-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: transform 0.08s, box-shadow 0.15s;
+}
+.appt-action:active { transform: scale(0.95); }
+.appt-action ion-icon { font-size: 14px; }
+.appt-action.primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(11, 99, 206, 0.25); }
+.appt-action.warn    { background: var(--warning); color: #fff; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25); }
+.appt-action.success { background: var(--success); color: #fff; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25); }
+.appt-action.ghost   { background: var(--surface-2); color: var(--text-2); border-color: var(--border); }
+
 
 /* Force horizontal-only for tab strips and stepper.
    Fixes previous bug where strips became both-axis scrolling. */

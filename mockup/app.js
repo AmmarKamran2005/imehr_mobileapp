@@ -229,6 +229,26 @@
       const card = document.createElement('div');
       card.className = 'appt-card';
       card.onclick = () => { state.currentAppt = a; App.go('appt-detail'); };
+
+      let action = '';
+      if (a.status === 'scheduled' || a.status === 'confirmed') {
+        action = `<button class="appt-action primary" onclick="event.stopPropagation(); App.quickCheckIn('${a.name}')">
+                    <ion-icon name="log-in-outline"></ion-icon> Check In
+                  </button>`;
+      } else if (a.status === 'checked-in') {
+        action = `<button class="appt-action warn" onclick="event.stopPropagation(); App.quickStart('${a.name}')">
+                    <ion-icon name="play-circle-outline"></ion-icon> Start
+                  </button>`;
+      } else if (a.status === 'in-progress') {
+        action = `<button class="appt-action success" onclick="event.stopPropagation(); App.quickResume('${a.name}')">
+                    <ion-icon name="play-forward-outline"></ion-icon> Resume
+                  </button>`;
+      } else if (a.status === 'completed') {
+        action = `<button class="appt-action ghost" onclick="event.stopPropagation(); App.openSignedNote()">
+                    <ion-icon name="document-text-outline"></ion-icon> View
+                  </button>`;
+      }
+
       card.innerHTML = `
         <div class="appt-time"><span class="t-hr">${a.time}</span><span class="t-mer">${a.mer}</span></div>
         <div class="appt-body">
@@ -236,9 +256,9 @@
           <p class="a-reason">${a.type} · ${a.reason}</p>
           <p class="a-room">${a.room}</p>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <div class="appt-right">
           <span class="chip sm ${s.cls}">${s.label}</span>
-          <div class="avatar avatar-sm">${a.initials}</div>
+          ${action}
         </div>`;
       list.appendChild(card);
     });
@@ -825,6 +845,24 @@
     },
 
     openSignedNote() { App.go('signed-note'); },
+
+    quickCheckIn(name) {
+      const a = appointments.find(x => x.name === name);
+      if (a) { state.currentAppt = a; a.status = 'checked-in'; }
+      renderAppointments();
+      App.toast(name + ' checked in');
+    },
+    quickStart(name) {
+      const a = appointments.find(x => x.name === name);
+      if (a) { state.currentAppt = a; a.status = 'in-progress'; }
+      renderAppointments();
+      App.openEncounter();
+    },
+    quickResume(name) {
+      const a = appointments.find(x => x.name === name);
+      if (a) state.currentAppt = a;
+      App.openEncounter();
+    },
 
     viewVersion(v) {
       $('#version-bar').hidden = false;
