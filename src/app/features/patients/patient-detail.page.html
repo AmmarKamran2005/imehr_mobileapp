@@ -1,0 +1,308 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="back()" aria-label="Back">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Patient Details</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="pd">
+  @if (loading() && !patient()) {
+    <div class="center"><ion-spinner name="crescent"></ion-spinner></div>
+  } @else if (patient(); as p) {
+    <!-- Header -->
+    <div class="head">
+      <div class="avatar">{{ initials() }}</div>
+      <div class="meta">
+        <h2>{{ displayName() }}</h2>
+        <p class="muted">
+          @if (p.gender) { {{ p.gender }} · }
+          @if (p.age != null) { {{ p.age }} yrs · }
+          MRN {{ p.mrn ?? '—' }}
+        </p>
+        <p class="muted tiny" *ngIf="p.phone || p.email">
+          @if (p.phone) { <ion-icon name="call-outline"></ion-icon> {{ p.phone }} }
+        </p>
+      </div>
+      <span class="imehr-chip" [class]="statusChip().tone">{{ statusChip().label }}</span>
+    </div>
+
+    <!-- Horizontal tab strip -->
+    <div class="strip strip-scroll" role="tablist">
+      @for (t of tabs; track t.key) {
+        <button
+          role="tab"
+          [attr.aria-selected]="currentTab() === t.key"
+          class="chip"
+          [class.active]="currentTab() === t.key"
+          (click)="pickTab(t.key)"
+        >
+          <ion-icon [name]="t.icon"></ion-icon>
+          <span>{{ t.label }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Panels -->
+    <div class="pane">
+      @switch (currentTab()) {
+
+        @case ('overview') {
+          <section class="card">
+            <h4>Basic</h4>
+            <div class="kv">
+              <div><span>DOB</span><strong>{{ p.dateOfBirth ? (p.dateOfBirth | date:'MMM d, y') : '—' }}</strong></div>
+              <div><span>Age</span><strong>{{ p.age ?? '—' }}</strong></div>
+              <div><span>Gender</span><strong>{{ p.gender ?? '—' }}</strong></div>
+              <div><span>Phone</span><strong>{{ p.phone ?? '—' }}</strong></div>
+              <div><span>Email</span><strong>{{ p.email ?? '—' }}</strong></div>
+              <div><span>MRN</span><strong>{{ p.mrn ?? '—' }}</strong></div>
+            </div>
+          </section>
+
+          @if (p.streetAddress || p.city) {
+            <section class="card">
+              <h4>Address</h4>
+              <p class="line">{{ p.streetAddress }}</p>
+              <p class="muted small">{{ addressLine(p) }}</p>
+            </section>
+          }
+
+          @if (p.emergencyContactName) {
+            <section class="card">
+              <h4>Emergency contact</h4>
+              <p class="line">{{ p.emergencyContactName }} @if (p.emergencyContactRelationship) { <span class="muted">· {{ p.emergencyContactRelationship }}</span> }</p>
+              <p class="muted small">{{ p.emergencyContactPhone ?? '—' }}</p>
+            </section>
+          }
+        }
+
+        @case ('problems') {
+          @if (problems().length === 0) { <p class="empty">No problems recorded.</p> }
+          @else {
+            @if (activeProblems().length) {
+              <p class="subhead">Active</p>
+              <ul class="rows">
+                @for (x of activeProblems(); track x.problemId) {
+                  <li>
+                    <div class="row-main">
+                      <strong>{{ x.description }}</strong>
+                      <span class="muted small">
+                        @if (x.icd10Code) { {{ x.icd10Code }} }
+                        @if (x.icd10Code && x.onsetDate) { · }
+                        @if (x.onsetDate) { Since {{ x.onsetDate | date:'y' }} }
+                      </span>
+                    </div>
+                    <span class="imehr-chip success">Active</span>
+                  </li>
+                }
+              </ul>
+            }
+            @if (problems().length !== activeProblems().length) {
+              <p class="subhead">Resolved</p>
+              <ul class="rows">
+                @for (x of problems(); track x.problemId) {
+                  @if (x.status === 'Resolved') {
+                    <li class="dim">
+                      <div class="row-main"><strong>{{ x.description }}</strong></div>
+                      <span class="imehr-chip neutral">Resolved</span>
+                    </li>
+                  }
+                }
+              </ul>
+            }
+          }
+        }
+
+        @case ('medications') {
+          @if (medications().length === 0) { <p class="empty">No medications on file.</p> }
+          @else {
+            <ul class="rows">
+              @for (m of medications(); track m.medicationId) {
+                <li [class.dim]="m.status === 'Discontinued'">
+                  <div class="row-main">
+                    <strong>{{ m.name }}</strong>
+                    <span class="muted small">
+                      @if (m.dose) { {{ m.dose }} }
+                      @if (m.route) { · {{ m.route }} }
+                      @if (m.frequency) { · {{ m.frequency }} }
+                    </span>
+                  </div>
+                  <span class="imehr-chip" [class]="m.status === 'Discontinued' ? 'danger' : 'success'">
+                    {{ m.status ?? 'Active' }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @case ('allergies') {
+          @if (allergies().length === 0) { <p class="empty">NKA — No known allergies.</p> }
+          @else {
+            <ul class="rows">
+              @for (a of allergies(); track a.allergyId) {
+                <li>
+                  <div class="row-main">
+                    <strong>{{ a.allergen }}</strong>
+                    <span class="muted small">
+                      @if (a.severity) { {{ a.severity }} }
+                      @if (a.severity && a.reaction) { · }
+                      @if (a.reaction) { {{ a.reaction }} }
+                    </span>
+                  </div>
+                  <span class="imehr-chip danger">{{ a.severity ?? 'Active' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @case ('vitals') {
+          @if (latestVital(); as v) {
+            <section class="card">
+              <h4>Latest — {{ v.recordedAt ? (v.recordedAt | date:'MMM d · h:mm a') : '—' }}</h4>
+              <div class="vgrid">
+                <div><span>BP</span><strong>{{ v.systolicBp ?? '?' }}/{{ v.diastolicBp ?? '?' }}</strong></div>
+                <div><span>HR</span><strong>{{ v.heartRate ?? '—' }}</strong></div>
+                <div><span>Temp</span><strong>{{ v.temperature ?? '—' }}@if (v.temperature != null){°F}</strong></div>
+                <div><span>SpO₂</span><strong>{{ v.spo2 ?? '—' }}@if (v.spo2 != null){%}</strong></div>
+                <div><span>Wt</span><strong>{{ v.weight ?? '—' }}@if (v.weight != null){ lb}</strong></div>
+                <div><span>BMI</span><strong>{{ v.bmi ?? '—' }}</strong></div>
+              </div>
+            </section>
+            <p class="subhead">History ({{ vitals().length }})</p>
+            @for (v2 of vitals(); track v2.vitalId) {
+              <div class="vrow">
+                <span class="muted small">{{ v2.recordedAt ? (v2.recordedAt | date:'MMM d, y') : '—' }}</span>
+                <span>BP {{ v2.systolicBp ?? '?' }}/{{ v2.diastolicBp ?? '?' }} · HR {{ v2.heartRate ?? '—' }} · BMI {{ v2.bmi ?? '—' }}</span>
+              </div>
+            }
+          } @else {
+            <p class="empty">No vitals recorded.</p>
+          }
+        }
+
+        @case ('immunizations') {
+          @if (immunizations().length === 0) { <p class="empty">No immunizations recorded.</p> }
+          @else {
+            <ul class="rows">
+              @for (i of immunizations(); track i.immunizationId) {
+                <li>
+                  <div class="row-main">
+                    <strong>{{ i.vaccine }}</strong>
+                    @if (i.administeredAt) { <span class="muted small">{{ i.administeredAt | date:'MMM y' }}</span> }
+                  </div>
+                  <span class="imehr-chip success">{{ i.status ?? 'Completed' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @case ('history') {
+          @if (familyHx().length + socialHx().length === 0) { <p class="empty">No history on file.</p> }
+          @if (familyHx().length) {
+            <p class="subhead">Family</p>
+            <ul class="rows">
+              @for (f of familyHx(); track f.familyHistoryId) {
+                <li>
+                  <div class="row-main">
+                    <strong>{{ f.relationship }}</strong>
+                    <span class="muted small">{{ f.conditions }}</span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+          @if (socialHx().length) {
+            <p class="subhead">Social</p>
+            <ul class="rows">
+              @for (s of socialHx(); track s.socialHistoryId) {
+                <li>
+                  <div class="row-main">
+                    <strong>{{ s.category }}</strong>
+                    <span class="muted small">{{ s.value }}</span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @case ('insurance') {
+          @if (primaryInsurance(); as ins) {
+            <section class="card">
+              <h4>Primary</h4>
+              <div class="kv">
+                <div><span>Payer</span><strong>{{ ins.payerName ?? '—' }}</strong></div>
+                <div><span>Plan</span><strong>{{ ins.planName ?? '—' }}</strong></div>
+                <div><span>Member ID</span><strong>{{ ins.memberId ?? '—' }}</strong></div>
+                <div><span>Group</span><strong>{{ ins.groupNumber ?? '—' }}</strong></div>
+                <div><span>Copay</span><strong>{{ ins.copay != null ? ('$' + ins.copay) : '—' }}</strong></div>
+                <div><span>Subscriber</span><strong>{{ ins.subscriberName ?? ins.subscriberRelationship ?? '—' }}</strong></div>
+              </div>
+            </section>
+          } @else {
+            <p class="empty">No insurance on file.</p>
+          }
+        }
+
+        @case ('encounters') {
+          @if (notes().length === 0) { <p class="empty">No encounters yet.</p> }
+          @else {
+            <ul class="rows">
+              @for (n of notes(); track n.clinicalNoteId) {
+                <li>
+                  <div class="row-main">
+                    <strong>{{ noteTypeLabel(n.type) }}</strong>
+                    <span class="muted small">
+                      {{ (n.serviceDate ?? n.createdAt) | date:'MMM d, y' }}
+                      @if (n.providerName) { · {{ n.providerName }} }
+                    </span>
+                  </div>
+                  <span class="imehr-chip" [class]="n.status === 2 ? 'success' : (n.status === 0 ? 'warning' : 'neutral')">
+                    {{ noteStatusLabel(n.status) }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @case ('appt-notes') {
+          <p class="subhead">Clinical Notes ({{ notes().length }})</p>
+          @if (notes().length === 0) { <p class="empty">No notes yet.</p> }
+          @else {
+            <ul class="rows">
+              @for (n of notes(); track n.clinicalNoteId) {
+                <li>
+                  <div class="row-main">
+                    <strong>{{ noteTypeLabel(n.type) }}</strong>
+                    <span class="muted small">{{ (n.serviceDate ?? n.createdAt) | date:'MMM d · h:mm a' }}</span>
+                    @if (n.signedAt) {
+                      <span class="imehr-chip success tiny">✓ Signed {{ n.signedAt | date:'MMM d' }}</span>
+                    }
+                  </div>
+                  <span class="imehr-chip" [class]="n.status === 2 ? 'success' : (n.status === 0 ? 'warning' : 'neutral')">
+                    {{ noteStatusLabel(n.status) }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @default {
+          <div class="soon">
+            <ion-icon name="time-outline"></ion-icon>
+            <p>Coming soon — this tab will land in a later polish pass.</p>
+          </div>
+        }
+      }
+    </div>
+  }
+</ion-content>

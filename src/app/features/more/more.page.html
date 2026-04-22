@@ -1,0 +1,68 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>More</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="more">
+  <div class="page">
+    <!-- Profile card -->
+    <div class="profile">
+      <div class="avatar">{{ initials() }}</div>
+      <div class="meta">
+        <h2>{{ user()?.fullName ?? '—' }}</h2>
+        <p class="muted">{{ role() }} · {{ user()?.tenantName ?? 'Medocs Clinic' }}</p>
+        <p class="muted small">{{ user()?.email ?? '' }}</p>
+      </div>
+      <ion-icon class="chev" name="chevron-forward"></ion-icon>
+    </div>
+
+    <!-- Security -->
+    <div class="group">
+      <div class="row" (click)="changePassword()">
+        <div class="ico"><ion-icon name="key-outline"></ion-icon></div>
+        <span>Change password</span>
+        <ion-icon class="chev" name="chevron-forward"></ion-icon>
+      </div>
+
+      @if (biometricAvailable()) {
+        <label class="row">
+          <div class="ico"><ion-icon name="finger-print-outline"></ion-icon></div>
+          <span>Biometric sign-in</span>
+          <label class="switch">
+            <input type="checkbox" [checked]="biometricOn()" (change)="toggleBiometric($event)" />
+            <span class="slider"></span>
+          </label>
+        </label>
+      }
+    </div>
+
+    <!-- Appearance -->
+    <div class="group">
+      <div class="row">
+        <div class="ico"><ion-icon name="moon-outline"></ion-icon></div>
+        <span>Theme</span>
+        <div class="seg">
+          <button [class.active]="themePref() === 'light'" (click)="setTheme('light')">Light</button>
+          <button [class.active]="themePref() === 'dark'"  (click)="setTheme('dark')">Dark</button>
+          <button [class.active]="themePref() === 'auto'"  (click)="setTheme('auto')">Auto</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- About / logout -->
+    <div class="group">
+      <div class="row">
+        <div class="ico"><ion-icon name="information-circle-outline"></ion-icon></div>
+        <span>About</span>
+        <span class="muted small">IMEHR · v0.1.0</span>
+      </div>
+      <div class="row danger" (click)="logout()">
+        <div class="ico danger"><ion-icon name="log-out-outline"></ion-icon></div>
+        <span>Log out</span>
+      </div>
+    </div>
+
+    <p class="ver">medocs.ai · Internal Medicine EHR</p>
+  </div>
+</ion-content>

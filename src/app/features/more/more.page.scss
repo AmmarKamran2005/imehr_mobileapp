@@ -1,0 +1,130 @@
+.more { --background: var(--ion-background-color); }
+
+.page {
+  padding: 14px 16px 32px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.muted { color: var(--imehr-text-2); }
+.small { font-size: 13px; }
+
+.profile {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  background: var(--ion-item-background);
+  border: 1px solid var(--imehr-border);
+  border-radius: var(--imehr-radius);
+  margin-top: 4px;
+  box-shadow: var(--imehr-shadow-sm);
+}
+.avatar {
+  width: 64px; height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--ion-color-primary), #0891b2);
+  color: #fff;
+  font-weight: 700;
+  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.profile .meta { flex: 1; min-width: 0; }
+.profile h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.profile p { margin: 1px 0; font-size: 13px; }
+
+.chev { color: var(--imehr-text-3); font-size: 18px; }
+
+.group {
+  background: var(--ion-item-background);
+  border: 1px solid var(--imehr-border);
+  border-radius: var(--imehr-radius);
+  margin-top: 14px;
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--imehr-border);
+  cursor: pointer;
+  font-size: 14.5px;
+}
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--imehr-surface-2); }
+.row > span:first-of-type { flex: 1; }
+.row.danger { color: var(--ion-color-danger); }
+
+.ico {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--imehr-primary-50);
+  color: var(--ion-color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ico ion-icon { font-size: 18px; }
+.ico.danger { background: rgba(220, 38, 38, 0.12); color: var(--ion-color-danger); }
+
+.seg {
+  display: flex;
+  background: var(--imehr-surface-2);
+  border-radius: 8px;
+  padding: 2px;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--imehr-text-2);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.seg button.active {
+  background: var(--ion-item-background);
+  color: var(--ion-text-color);
+  box-shadow: var(--imehr-shadow-sm);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px; height: 24px;
+  cursor: pointer;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute;
+  inset: 0;
+  background: var(--imehr-border-strong);
+  transition: 0.2s;
+  border-radius: 999px;
+}
+.switch .slider::before {
+  content: '';
+  position: absolute;
+  height: 18px; width: 18px;
+  left: 3px; top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.switch input:checked + .slider { background: var(--ion-color-primary); }
+.switch input:checked + .slider::before { transform: translateX(18px); }
+
+.ver {
+  text-align: center;
+  color: var(--imehr-text-3);
+  font-size: 12px;
+  margin: 24px 0 0;
+}

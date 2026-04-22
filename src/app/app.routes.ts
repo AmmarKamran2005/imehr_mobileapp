@@ -2,12 +2,26 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { noAuthGuard } from './core/auth/no-auth.guard';
 
+/**
+ * Routing layout
+ * ---
+ *   /login, /otp, /biometric-prompt        — auth screens, no tab bar
+ *   /tabs                                  — bottom tab shell
+ *     /tabs/schedule                       — today's dashboard
+ *     /tabs/patients                       — patient list
+ *     /tabs/more                           — settings / profile
+ *   /appointment/:id                       — full-screen, above tabs
+ *   /encounter/:appointmentId              — full-screen wizard
+ *   /patient/:id                           — full-screen chart with tabs inside
+ */
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/schedule',
+    redirectTo: '/tabs/schedule',
     pathMatch: 'full',
   },
+
+  /* ---------- Auth ---------- */
   {
     path: 'login',
     canActivate: [noAuthGuard],
@@ -28,12 +42,34 @@ export const routes: Routes = [
         (m) => m.BiometricPromptPage,
       ),
   },
+
+  /* ---------- Tab shell + child pages ---------- */
   {
-    path: 'schedule',
+    path: 'tabs',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/schedule/schedule.page').then((m) => m.SchedulePage),
+      import('./features/tabs/tabs.page').then((m) => m.TabsPage),
+    children: [
+      { path: '', redirectTo: 'schedule', pathMatch: 'full' },
+      {
+        path: 'schedule',
+        loadComponent: () =>
+          import('./features/schedule/schedule.page').then((m) => m.SchedulePage),
+      },
+      {
+        path: 'patients',
+        loadComponent: () =>
+          import('./features/patients/patients-list.page').then((m) => m.PatientsListPage),
+      },
+      {
+        path: 'more',
+        loadComponent: () =>
+          import('./features/more/more.page').then((m) => m.MorePage),
+      },
+    ],
   },
+
+  /* ---------- Full-screen pages (push above tabs) ---------- */
   {
     path: 'appointment/:id',
     canActivate: [authGuard],
@@ -49,8 +85,17 @@ export const routes: Routes = [
       import('./features/encounter/encounter.page').then((m) => m.EncounterPage),
   },
   {
-    // wildcard fallback
-    path: '**',
-    redirectTo: '/schedule',
+    path: 'patient/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/patients/patient-detail.page').then((m) => m.PatientDetailPage),
   },
+
+  /* ---------- Back-compat redirects (old /schedule links still work) ---------- */
+  { path: 'schedule', redirectTo: '/tabs/schedule' },
+  { path: 'patients', redirectTo: '/tabs/patients' },
+  { path: 'more',     redirectTo: '/tabs/more' },
+
+  /* wildcard */
+  { path: '**', redirectTo: '/tabs/schedule' },
 ];

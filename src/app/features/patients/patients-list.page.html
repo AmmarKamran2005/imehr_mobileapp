@@ -1,0 +1,56 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Patients</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="pl">
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page">
+    <!-- Search -->
+    <div class="search imehr-field">
+      <ion-icon name="search-outline"></ion-icon>
+      <input
+        type="search"
+        placeholder="Search by name, MRN, phone (min 3 chars)…"
+        [ngModel]="search()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+    </div>
+
+    <!-- Status seg -->
+    <div class="seg">
+      <button [class.active]="statusFilter() === 'all'" (click)="onStatusChange('all')">All</button>
+      <button [class.active]="statusFilter() === 0"     (click)="onStatusChange(0)">Active</button>
+      <button [class.active]="statusFilter() === 1"     (click)="onStatusChange(1)">Inactive</button>
+      <button [class.active]="statusFilter() === 2"     (click)="onStatusChange(2)">Discharged</button>
+    </div>
+
+    @if (loading() && items().length === 0) {
+      <div class="center"><ion-spinner name="crescent"></ion-spinner></div>
+    } @else if (items().length === 0) {
+      <div class="empty">
+        <ion-icon name="people-outline"></ion-icon>
+        <p>No patients found matching your criteria.</p>
+      </div>
+    } @else {
+      <div class="count">{{ items().length }} of {{ total() }} patients</div>
+      <ul class="list">
+        @for (p of items(); track p.patientId) {
+          <li class="row" (click)="open(p)">
+            <div class="avatar">{{ initials(p) }}</div>
+            <div class="body">
+              <p class="name">{{ displayName(p) }}</p>
+              <p class="meta muted">{{ meta(p) }}</p>
+            </div>
+            <span class="imehr-chip" [class]="status(p).tone">{{ status(p).label }}</span>
+            <ion-icon class="chev" name="chevron-forward"></ion-icon>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</ion-content>
