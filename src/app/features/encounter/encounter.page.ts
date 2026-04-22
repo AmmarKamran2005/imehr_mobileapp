@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -13,13 +13,18 @@ import { HapticsService } from 'src/app/core/ui/haptics.service';
 import { LoggerService } from 'src/app/core/logger/logger.service';
 
 import { ENCOUNTER_STEPS } from 'src/app/core/models/encounter.model';
+import { VoiceTabKey } from 'src/app/core/models/voice.model';
 import { formatTime12, initialsFromName } from 'src/app/core/models/appointment.model';
 import { UserRole } from 'src/app/core/models/user.model';
 
 import { EncounterStepperComponent } from './components/encounter-stepper.component';
 import { SaveStripComponent } from './components/save-strip.component';
+import { VoiceBarComponent } from './components/voice-bar.component';
 import { StepVitalsComponent } from './steps/step-vitals.component';
+import { StepHistoryComponent } from './steps/step-history.component';
+import { StepCcHpiComponent } from './steps/step-cc-hpi.component';
 import { StepPlaceholderComponent } from './steps/step-placeholder.component';
+import { VoiceService } from 'src/app/core/services/voice.service';
 
 /**
  * The encounter wizard — shell plus step switcher.
@@ -34,18 +39,20 @@ import { StepPlaceholderComponent } from './steps/step-placeholder.component';
   imports: [
     CommonModule,
     IonContent, IonSpinner, IonIcon,
-    EncounterStepperComponent, SaveStripComponent,
-    StepVitalsComponent, StepPlaceholderComponent,
+    EncounterStepperComponent, SaveStripComponent, VoiceBarComponent,
+    StepVitalsComponent, StepHistoryComponent, StepCcHpiComponent,
+    StepPlaceholderComponent,
   ],
   templateUrl: './encounter.page.html',
   styleUrls: ['./encounter.page.scss'],
 })
-export class EncounterPage implements OnInit {
+export class EncounterPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly actionSheets = inject(ActionSheetController);
 
   readonly store = inject(EncounterStore);
+  readonly voice = inject(VoiceService);
   private readonly auth = inject(AuthService);
   private readonly toasts = inject(ToastService);
   private readonly haptics = inject(HapticsService);
@@ -73,6 +80,16 @@ export class EncounterPage implements OnInit {
   readonly isFirstStep = computed(() => this.currentStep() === 0);
   readonly isLastStep  = computed(() => this.currentStep() === this.steps.length - 1);
 
+  /** Which step owns the Unified Voice Bar right now (null = hidden). */
+  readonly voiceTab = computed<VoiceTabKey | null>(() => {
+    const def = ENCOUNTER_STEPS[this.currentStep()];
+    if (!def?.hasVoiceBar) return null;
+    if (def.key === 'vitals')  return 'vitals';
+    if (def.key === 'history') return 'history';
+    if (def.key === 'cc-hpi')  return 'cc-hpi';
+    return null;
+  });
+
   async ngOnInit(): Promise<void> {
     const id = Number(this.route.snapshot.paramMap.get('appointmentId'));
     if (!Number.isFinite(id) || id <= 0) {
@@ -84,6 +101,11 @@ export class EncounterPage implements OnInit {
       await this.toasts.error('Could not load this appointment.');
       await this.router.navigate(['/schedule']);
     }
+  }
+
+  async ngOnDestroy(): Promise<void> {
+    // If the user backs out mid-recording, cancel cleanly so the mic is released.
+    try { await this.voice.cancel(); } catch { /* ignore */ }
   }
 
   /* ============================================================

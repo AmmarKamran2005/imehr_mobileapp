@@ -28,6 +28,11 @@
   (pick)="onPickStep($event)"
 ></app-encounter-stepper>
 
+<!-- Unified Voice Bar (AI Scribe) — only on steps 0-2 -->
+@if (voiceTab(); as tab) {
+  <app-voice-bar [tabKey]="tab"></app-voice-bar>
+}
+
 <!-- Step body -->
 <ion-content [fullscreen]="true" class="pane-scroll">
   @if (loading() && !appointment()) {
@@ -38,22 +43,8 @@
     <div class="panes">
       @switch (currentStep()) {
         @case (0) { <app-step-vitals></app-step-vitals> }
-        @case (1) {
-          <app-step-placeholder
-            title="History Review"
-            icon="people-outline"
-            phase="Arrives in Phase 4"
-            note="Allergies, medications, problems, family & social history, immunizations — each editable with add/remove."
-          ></app-step-placeholder>
-        }
-        @case (2) {
-          <app-step-placeholder
-            title="CC & HPI"
-            icon="chatbubble-ellipses-outline"
-            phase="Arrives in Phase 4"
-            note="Chief Complaint + HPI free-text fields, with the Unified Voice Bar (AI Scribe) pinned above."
-          ></app-step-placeholder>
-        }
+        @case (1) { <app-step-history></app-step-history> }
+        @case (2) { <app-step-cc-hpi></app-step-cc-hpi> }
         @case (3) {
           <app-step-placeholder
             title="Clinical Note"

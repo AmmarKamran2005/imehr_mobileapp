@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { debounceTime, filter } from 'rxjs/operators';
 
 import { AppointmentDetailDto } from '../models/appointment.model';
 import {
@@ -8,13 +8,19 @@ import {
   blankVitals, computeBmi,
   defaultStepForRole,
 } from '../models/encounter.model';
+import {
+  AllergyDto, FamilyHistoryDto, HistoryCounts, ImmunizationDto,
+  MedicationDto, ProblemDto, SocialHistoryDto,
+} from '../models/history.model';
 import { UserRole } from '../models/user.model';
 
 import { AppointmentsService } from './appointments.service';
 import { EncounterService } from './encounter.service';
 import { VitalsService } from './vitals.service';
+import { PatientHistoryService } from './patient-history.service';
 import { AuthService } from '../auth/auth.service';
 import { LoggerService } from '../logger/logger.service';
+import { ProcessChunkResponse } from '../models/voice.model';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 type SaveKind = 'vitals' | 'encounter';
@@ -25,16 +31,20 @@ type SaveKind = 'vitals' | 'encounter';
  * Lifecycle:
  *   1. EncounterPage calls `enter(appointmentId)` on init.
  *   2. Store loads the appointment → ensures an encounter exists → loads
- *      latest vitals for this encounter.
+ *      latest vitals and the six history lists in parallel.
  *   3. Each step component reads/writes through this store.
- *   4. Debounced saves (1200ms) fire POST/PUT and update the save status strip.
- *   5. On exit / logout, `reset()` clears state.
+ *   4. Debounced saves (1.2 s) fire POST/PUT to /vitals or /encounters/{id}
+ *      and update the save status strip.
+ *   5. The Unified Voice Bar (Phase 4) calls `applyVoiceChunk()` with the
+ *      server's extractedData so fields fill in as the user speaks.
+ *   6. On exit / logout, `reset()` clears state.
  */
 @Injectable({ providedIn: 'root' })
 export class EncounterStore {
   private readonly appointmentsApi = inject(AppointmentsService);
   private readonly encountersApi = inject(EncounterService);
   private readonly vitalsApi = inject(VitalsService);
+  private readonly historyApi = inject(PatientHistoryService);
   private readonly auth = inject(AuthService);
   private readonly log = inject(LoggerService);
 
@@ -46,6 +56,23 @@ export class EncounterStore {
   readonly vitals      = signal<VitalDto | null>(null);
   readonly historicalVitals = signal<VitalDto[]>([]);
 
+  // History — one signal per sub-section. Components read whichever they need.
+  readonly allergies     = signal<AllergyDto[]>([]);
+  readonly medications   = signal<MedicationDto[]>([]);
+  readonly problems      = signal<ProblemDto[]>([]);
+  readonly familyHistory = signal<FamilyHistoryDto[]>([]);
+  readonly socialHistory = signal<SocialHistoryDto[]>([]);
+  readonly immunizations = signal<ImmunizationDto[]>([]);
+
+  readonly historyCounts = computed<HistoryCounts>(() => ({
+    allergies:     this.allergies().length,
+    medications:   this.medications().length,
+    problems:      this.problems().length,
+    familyHistory: this.familyHistory().length,
+    socialHistory: this.socialHistory().length,
+    immunizations: this.immunizations().length,
+  }));
+
   readonly step = signal<number>(0);
   readonly completed = signal<boolean[]>(new Array(ENCOUNTER_STEPS.length).fill(false));
 
@@ -56,17 +83,22 @@ export class EncounterStore {
   readonly currentStepDef = computed(() => ENCOUNTER_STEPS[this.step()] ?? ENCOUNTER_STEPS[0]);
 
   /* ============================================================
-     Save pipeline — one subject per domain object, each debounced
-     independently so keystrokes on vitals don't delay CC/HPI saves
-     when those arrive in Phase 4.
+     Save pipeline — one subject that we filter on kind, so each domain
+     debounces independently without collapsing across domains.
      ============================================================ */
   private readonly saveSubject = new Subject<SaveKind>();
   private savedTimer: number | null = null;
 
   constructor() {
-    this.saveSubject.pipe(debounceTime(1200)).subscribe((kind) => {
-      void this.flush(kind);
-    });
+    this.saveSubject.pipe(
+      filter((k) => k === 'vitals'),
+      debounceTime(1200),
+    ).subscribe(() => void this.flushVitals());
+
+    this.saveSubject.pipe(
+      filter((k) => k === 'encounter'),
+      debounceTime(1200),
+    ).subscribe(() => void this.flushEncounter());
 
     // Auto-reset once the user logs out
     effect(() => {
@@ -82,27 +114,40 @@ export class EncounterStore {
     try {
       const appt = await this.appointmentsApi.get(appointmentId);
       this.appointment.set(appt);
-      if (!appt) {
-        this.loading.set(false);
-        return;
-      }
+      if (!appt) { this.loading.set(false); return; }
 
-      // Ensure we have an encounter row to attach data to.
       const enc = await this.ensureEncounter(appt);
       this.encounter.set(enc);
 
-      // Load existing vitals (latest for this encounter, else blank).
-      const all = await this.vitalsApi.list(appt.patientId);
-      this.historicalVitals.set(all);
+      // Load everything in parallel.
+      const [
+        vitalsList,
+        allergies, medications, problems, family, social, imm,
+      ] = await Promise.all([
+        this.vitalsApi.list(appt.patientId),
+        this.historyApi.listAllergies(appt.patientId),
+        this.historyApi.listMedications(appt.patientId),
+        this.historyApi.listProblems(appt.patientId),
+        this.historyApi.listFamilyHistory(appt.patientId),
+        this.historyApi.listSocialHistory(appt.patientId),
+        this.historyApi.listImmunizations(appt.patientId),
+      ]);
+
+      this.historicalVitals.set(vitalsList);
       const mine = enc
-        ? all.find((v) => v.encounterId === enc.encounterId) ?? null
+        ? vitalsList.find((v) => v.encounterId === enc.encounterId) ?? null
         : null;
       this.vitals.set(mine ?? blankVitals(appt.patientId, enc?.encounterId ?? null));
 
-      // Compute initial completion marks from loaded data.
+      this.allergies.set(allergies);
+      this.medications.set(medications);
+      this.problems.set(problems);
+      this.familyHistory.set(family);
+      this.socialHistory.set(social);
+      this.immunizations.set(imm);
+
       this.recomputeCompleted();
 
-      // Pick the default step based on role.
       const role = this.auth.user()?.role ?? UserRole.Clinician;
       this.step.set(defaultStepForRole(role));
     } finally {
@@ -115,6 +160,12 @@ export class EncounterStore {
     this.encounter.set(null);
     this.vitals.set(null);
     this.historicalVitals.set([]);
+    this.allergies.set([]);
+    this.medications.set([]);
+    this.problems.set([]);
+    this.familyHistory.set([]);
+    this.socialHistory.set([]);
+    this.immunizations.set([]);
     this.step.set(0);
     this.completed.set(new Array(ENCOUNTER_STEPS.length).fill(false));
     this.saveStatus.set('idle');
@@ -133,14 +184,12 @@ export class EncounterStore {
   prev(): void { this.goStep(this.step() - 1); }
 
   /* ============================================================
-     Public: step 0 — vitals
+     Public: Step 0 — vitals
      ============================================================ */
-  /** Patch the in-memory vitals and kick the debounced save. */
   patchVitals(patch: Partial<VitalDto>): void {
     const cur = this.vitals();
     if (!cur) return;
     const merged: VitalDto = { ...cur, ...patch };
-    // Auto-compute BMI whenever weight/height change.
     if ('weight' in patch || 'height' in patch) {
       merged.bmi = computeBmi(merged.weight ?? null, merged.height ?? null);
     }
@@ -150,23 +199,192 @@ export class EncounterStore {
   }
 
   /* ============================================================
-     Save plumbing
+     Public: Step 1 — history (6 sub-sections)
      ============================================================ */
-  private async flush(kind: SaveKind): Promise<void> {
+  async addAllergy(body: Partial<AllergyDto>): Promise<void> {
+    const pid = this.appointment()?.patientId;
+    if (!pid) return;
+    this.saveStatus.set('saving');
+    const created = await this.historyApi.addAllergy(pid, { ...body, patientId: pid });
+    if (created) this.allergies.update((list) => [...list, created]);
+    this.afterHistoryMutation();
+  }
+  async removeAllergy(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const ok = await this.historyApi.removeAllergy(pid, id);
+    if (ok) this.allergies.update((list) => list.filter((a) => a.allergyId !== id));
+    this.afterHistoryMutation();
+  }
+
+  async addMedication(body: Partial<MedicationDto>): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const created = await this.historyApi.addMedication(pid, { ...body, patientId: pid, status: 'Active' });
+    if (created) this.medications.update((list) => [...list, created]);
+    this.afterHistoryMutation();
+  }
+  async discontinueMedication(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const updated = await this.historyApi.discontinueMedication(pid, id);
+    if (updated) this.medications.update((list) => list.map((m) => m.medicationId === id ? updated : m));
+    this.afterHistoryMutation();
+  }
+  async removeMedication(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const ok = await this.historyApi.removeMedication(pid, id);
+    if (ok) this.medications.update((list) => list.filter((m) => m.medicationId !== id));
+    this.afterHistoryMutation();
+  }
+
+  async addProblem(body: Partial<ProblemDto>): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const created = await this.historyApi.addProblem(pid, { ...body, patientId: pid, status: 'Active' });
+    if (created) this.problems.update((list) => [...list, created]);
+    this.afterHistoryMutation();
+  }
+  async resolveProblem(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const updated = await this.historyApi.resolveProblem(pid, id);
+    if (updated) this.problems.update((list) => list.map((p) => p.problemId === id ? updated : p));
+    this.afterHistoryMutation();
+  }
+  async removeProblem(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const ok = await this.historyApi.removeProblem(pid, id);
+    if (ok) this.problems.update((list) => list.filter((p) => p.problemId !== id));
+    this.afterHistoryMutation();
+  }
+
+  async addFamilyHistory(body: Partial<FamilyHistoryDto>): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const created = await this.historyApi.addFamilyHistory(pid, { ...body, patientId: pid });
+    if (created) this.familyHistory.update((list) => [...list, created]);
+    this.afterHistoryMutation();
+  }
+  async removeFamilyHistory(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const ok = await this.historyApi.removeFamilyHistory(pid, id);
+    if (ok) this.familyHistory.update((list) => list.filter((f) => f.familyHistoryId !== id));
+    this.afterHistoryMutation();
+  }
+
+  async addSocialHistory(body: Partial<SocialHistoryDto>): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const created = await this.historyApi.addSocialHistory(pid, { ...body, patientId: pid });
+    if (created) this.socialHistory.update((list) => [...list, created]);
+    this.afterHistoryMutation();
+  }
+  async removeSocialHistory(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const ok = await this.historyApi.removeSocialHistory(pid, id);
+    if (ok) this.socialHistory.update((list) => list.filter((s) => s.socialHistoryId !== id));
+    this.afterHistoryMutation();
+  }
+
+  async addImmunization(body: Partial<ImmunizationDto>): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const created = await this.historyApi.addImmunization(pid, { ...body, patientId: pid });
+    if (created) this.immunizations.update((list) => [...list, created]);
+    this.afterHistoryMutation();
+  }
+  async removeImmunization(id: number): Promise<void> {
+    const pid = this.appointment()?.patientId; if (!pid) return;
+    this.saveStatus.set('saving');
+    const ok = await this.historyApi.removeImmunization(pid, id);
+    if (ok) this.immunizations.update((list) => list.filter((i) => i.immunizationId !== id));
+    this.afterHistoryMutation();
+  }
+
+  private afterHistoryMutation(): void {
+    this.markSaved();
+    this.recomputeCompleted();
+  }
+
+  /* ============================================================
+     Public: Step 2 — CC & HPI (on the encounter row)
+     ============================================================ */
+  patchCcHpi(patch: Partial<Pick<EncounterDto, 'chiefComplaint' | 'historyOfPresentIllness'>>): void {
+    const cur = this.encounter();
+    if (!cur) return;
+    this.encounter.set({ ...cur, ...patch });
+    this.saveStatus.set('saving');
+    this.saveSubject.next('encounter');
+  }
+
+  /* ============================================================
+     Public: Voice Bar hook — called by VoiceService per chunk.
+     ============================================================ */
+  applyVoiceChunk(resp: ProcessChunkResponse): void {
+    const d = resp.extractedData;
+    if (!d || typeof d !== 'object') return;
+
+    // Vitals extraction
+    const vitalKeys: Array<keyof VitalDto> = [
+      'systolicBp', 'diastolicBp', 'heartRate', 'temperature',
+      'spo2', 'respiratoryRate', 'weight', 'height', 'painScore',
+    ];
+    const vitalsPatch: Partial<VitalDto> = {};
+    for (const k of vitalKeys) {
+      const v = (d as Record<string, unknown>)[k as string] ??
+                (d as Record<string, unknown>)[toTitle(k as string)];
+      if (typeof v === 'number') (vitalsPatch as Record<string, number>)[k as string] = v;
+    }
+    if (Object.keys(vitalsPatch).length > 0) this.patchVitals(vitalsPatch);
+
+    // CC / HPI extraction
+    const cc = stringOrNull((d as Record<string, unknown>)['chiefComplaint']) ??
+               stringOrNull((d as Record<string, unknown>)['ChiefComplaint']);
+    const hpi = stringOrNull((d as Record<string, unknown>)['historyOfPresentIllness']) ??
+                stringOrNull((d as Record<string, unknown>)['HistoryOfPresentIllness']) ??
+                stringOrNull((d as Record<string, unknown>)['hpi']);
+    const patch: Partial<Pick<EncounterDto, 'chiefComplaint' | 'historyOfPresentIllness'>> = {};
+    if (cc != null)  patch.chiefComplaint = cc;
+    if (hpi != null) patch.historyOfPresentIllness = hpi;
+    if (Object.keys(patch).length > 0) this.patchCcHpi(patch);
+  }
+
+  /* ============================================================
+     Flush logic
+     ============================================================ */
+  private async flushVitals(): Promise<void> {
     try {
-      if (kind === 'vitals') {
-        const v = this.vitals();
-        if (!v) return;
-        const saved = await this.vitalsApi.save(v);
-        if (saved) {
-          // merge server echo (e.g. newly assigned vitalId + timestamps)
-          this.vitals.set({ ...v, ...saved });
-        }
-      }
+      const v = this.vitals();
+      if (!v) return;
+      const saved = await this.vitalsApi.save(v);
+      if (saved) this.vitals.set({ ...v, ...saved });
       this.markSaved();
       this.recomputeCompleted();
     } catch (e) {
-      this.log.warn('EncounterStore', `flush ${kind} failed`, e);
+      this.log.warn('EncounterStore', 'flushVitals failed', e);
+      this.saveStatus.set('error');
+    }
+  }
+
+  private async flushEncounter(): Promise<void> {
+    try {
+      const enc = this.encounter();
+      const appt = this.appointment();
+      if (!enc || !appt) return;
+      const saved = await this.encountersApi.update(appt.patientId, enc.encounterId, {
+        chiefComplaint: enc.chiefComplaint,
+        historyOfPresentIllness: enc.historyOfPresentIllness,
+      });
+      if (saved) this.encounter.set({ ...enc, ...saved });
+      this.markSaved();
+      this.recomputeCompleted();
+    } catch (e) {
+      this.log.warn('EncounterStore', 'flushEncounter failed', e);
       this.saveStatus.set('error');
     }
   }
@@ -183,26 +401,28 @@ export class EncounterStore {
   private recomputeCompleted(): void {
     const marks = [...this.completed()];
     marks[0] = hasAnyVital(this.vitals());
-    // later phases will set marks[1..7] based on their own data
+    marks[1] = this.hasAnyHistory();
+    marks[2] = !!(this.encounter()?.chiefComplaint) || !!(this.encounter()?.historyOfPresentIllness);
+    // marks[3..7] — later phases
     this.completed.set(marks);
+  }
+
+  private hasAnyHistory(): boolean {
+    const c = this.historyCounts();
+    return (c.allergies + c.medications + c.problems + c.familyHistory + c.socialHistory + c.immunizations) > 0;
   }
 
   /* ============================================================
      Encounter bootstrap
      ============================================================ */
   private async ensureEncounter(appt: AppointmentDetailDto): Promise<EncounterDto | null> {
-    // If the appointment already surfaces an encounterId, load it.
     if (appt.encounterId != null) {
       const existing = await this.encountersApi.get(appt.patientId, appt.encounterId);
       if (existing) return existing;
     }
-
-    // Otherwise, try listing and matching on appointmentId.
     const all = await this.encountersApi.listForPatient(appt.patientId);
     const found = all.find((e) => e.appointmentId === appt.appointmentId);
     if (found) return found;
-
-    // None exists yet — create one attached to this appointment.
     const providerId = appt.providerId ?? this.auth.user()?.providerId ?? undefined;
     return this.encountersApi.create(appt.patientId, {
       appointmentId: appt.appointmentId,
@@ -218,4 +438,12 @@ function hasAnyVital(v: VitalDto | null): boolean {
     v.systolicBp, v.diastolicBp, v.heartRate, v.temperature,
     v.spo2, v.respiratoryRate, v.weight, v.height, v.painScore,
   ].some((x) => x != null);
+}
+
+function stringOrNull(x: unknown): string | null {
+  return typeof x === 'string' && x.trim().length > 0 ? x : null;
+}
+
+function toTitle(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
