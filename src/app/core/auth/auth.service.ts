@@ -13,7 +13,7 @@ import {
   VerifyOtpRequest, VerifyOtpResponse,
   ResendOtpRequest,
   RefreshRequest, RefreshResponse,
-  StoredAuth,
+  StoredAuth, toCurrentUser,
 } from '../models/auth.dto';
 
 /**
@@ -49,7 +49,6 @@ export class AuthService {
 
   // Pending login (between /login and /verify-otp)
   private pendingEmail: string | null = null;
-  private pendingChallenge: string | null = null;
   private pendingRemember = false;
 
   private refreshInFlight: Promise<boolean> | null = null;
@@ -83,23 +82,27 @@ export class AuthService {
      Login flow
      ============================================================ */
   async login(email: string, password: string, rememberDevice: boolean): Promise<LoginResponse> {
-    const body: LoginRequest = { email, password, rememberDevice };
+    const body: LoginRequest = { email, password };
     const res = await firstValueFrom(
       this.http.post<LoginResponse>(`${this.api}/api/auth/login`, body),
     );
 
+    // Keep the remember-device choice for the OTP step where the server
+    // actually consumes it (sets the __medocs_dt cookie on verify-otp).
+    this.pendingEmail = email;
+    this.pendingRemember = rememberDevice;
+
     if (res.requiresOtpVerification) {
-      this.pendingEmail = email;
-      this.pendingChallenge = res.otpChallenge ?? null;
-      this.pendingRemember = rememberDevice;
       this.log.info('Auth', 'OTP required for', email);
-    } else if (res.token && res.refreshToken && res.user) {
+    } else if (res.token && res.refreshToken) {
+      // Trusted device path — identity fields are flat on the response.
       await this.applySession({
         token: res.token,
         refreshToken: res.refreshToken,
         tokenExpiry: res.tokenExpiry ?? '',
-        user: res.user,
+        user: toCurrentUser(res),
       });
+      this.pendingEmail = null;
       this.log.info('Auth', 'login success (trusted device)', email);
     }
 
@@ -110,31 +113,27 @@ export class AuthService {
     if (!this.pendingEmail) throw new Error('No pending login for OTP');
     const body: VerifyOtpRequest = {
       email: this.pendingEmail,
-      code,
-      otpChallenge: this.pendingChallenge ?? undefined,
+      otpCode: code,
       rememberDevice: this.pendingRemember,
     };
     const res = await firstValueFrom(
       this.http.post<VerifyOtpResponse>(`${this.api}/api/auth/verify-otp`, body),
     );
+    const user = toCurrentUser(res);
     await this.applySession({
       token: res.token,
-      refreshToken: res.refreshToken,
-      tokenExpiry: res.tokenExpiry,
-      user: res.user,
+      refreshToken: res.refreshToken ?? '',
+      tokenExpiry: res.tokenExpiry ?? '',
+      user,
     });
     this.pendingEmail = null;
-    this.pendingChallenge = null;
-    this.log.info('Auth', 'OTP verified', res.user.email);
-    return res.user;
+    this.log.info('Auth', 'OTP verified', user.email);
+    return user;
   }
 
   async resendOtp(): Promise<void> {
     if (!this.pendingEmail) throw new Error('No pending login');
-    const body: ResendOtpRequest = {
-      email: this.pendingEmail,
-      otpChallenge: this.pendingChallenge ?? undefined,
-    };
+    const body: ResendOtpRequest = { email: this.pendingEmail };
     await firstValueFrom(this.http.post<void>(`${this.api}/api/auth/resend-otp`, body));
     this.log.info('Auth', 'OTP resent', this.pendingEmail);
   }

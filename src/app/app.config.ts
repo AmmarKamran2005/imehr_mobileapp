@@ -17,6 +17,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/http/auth.interceptor';
 import { errorInterceptor } from './core/http/error.interceptor';
 import { loggingInterceptor } from './core/http/logging.interceptor';
+import { casingInterceptor } from './core/http/casing.interceptor';
 import { AuthService } from './core/auth/auth.service';
 
 /**
@@ -53,6 +54,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([
         loggingInterceptor,
         authInterceptor,
+        casingInterceptor,
         errorInterceptor,
       ]),
     ),

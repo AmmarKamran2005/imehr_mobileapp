@@ -2,47 +2,60 @@ import { CurrentUser, UserRole } from './user.model';
 
 /* ============================================================
    Request / response shapes for /api/auth/*
-   Mirrors AuthController.cs on the IMEHR backend.
-   Field names must match server JSON exactly.
+   Mirrors AuthController.cs + UserLoginDto / VerifyOtpDto / UserLoginResponseDto.
+   Responses are normalized to camelCase by the casing.interceptor before
+   they reach this layer.
    ============================================================ */
 
 export interface LoginRequest {
   email: string;
   password: string;
-  rememberDevice: boolean;   // web: "Remember this device for 15 days"
+  /** Optional tenant selector for multi-tenant users; usually null. */
+  tenantId?: number | null;
 }
 
+/**
+ * Flat response from the backend. Note there is NO nested `user` object —
+ * identity + tenant + flags live side-by-side with the tokens.
+ */
 export interface LoginResponse {
-  /** When true, client must send an OTP via /api/auth/verify-otp. */
-  requiresOtpVerification: boolean;
-  /** Populated only when OTP is NOT required (trusted device). */
-  token?: string;
+  /** "" when OTP is still required; populated on trusted devices. */
+  token: string;
   refreshToken?: string;
-  tokenExpiry?: string;       // ISO datetime
-  user?: CurrentUser;
-  /** Opaque challenge value client echoes back to /verify-otp. */
-  otpChallenge?: string;
-  /** Optional hint for UI (e.g. masked email). */
+  tokenExpiry?: string;
+
+  userId: number;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  tenantId?: number | null;
+  tenantName?: string | null;
+  tenantSubdomain?: string | null;
+  tenantHasLogo?: boolean;
+  providerId?: number | null;
+
+  requiresTenantSelection?: boolean;
+  requiresOtpVerification?: boolean;
+  maskedEmail?: string;
+  pendingDeviceTrust?: boolean;
+
   message?: string;
 }
 
 export interface VerifyOtpRequest {
   email: string;
-  code: string;
-  otpChallenge?: string;
+  /** Server field is exactly `otpCode`. */
+  otpCode: string;
+  tenantId?: number | null;
+  /** Set the 15-day trusted-device cookie on success. */
   rememberDevice: boolean;
 }
 
-export interface VerifyOtpResponse {
-  token: string;
-  refreshToken: string;
-  tokenExpiry: string;
-  user: CurrentUser;
-}
+/** Same envelope as LoginResponse — once verified, token is populated. */
+export type VerifyOtpResponse = LoginResponse;
 
 export interface ResendOtpRequest {
   email: string;
-  otpChallenge?: string;
 }
 
 export interface RefreshRequest {
@@ -76,6 +89,19 @@ export interface StoredAuth {
   refreshToken: string;
   tokenExpiry: string;
   user: CurrentUser;
+}
+
+/** Helper: flatten the API payload down to our local CurrentUser. */
+export function toCurrentUser(r: LoginResponse): CurrentUser {
+  return {
+    userId:     r.userId,
+    email:      r.email,
+    fullName:   r.fullName,
+    role:       r.role,
+    tenantId:   r.tenantId ?? 0,
+    tenantName: r.tenantName ?? '',
+    providerId: r.providerId ?? null,
+  };
 }
 
 /** Role bit used by controllers — stringified comma list (see RoleGate util). */

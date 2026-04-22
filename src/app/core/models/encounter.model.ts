@@ -106,7 +106,7 @@ export function computeBmi(weightLbs: number | null | undefined, heightIn: numbe
 
 export type StepKey =
   | 'vitals' | 'history' | 'cc-hpi' | 'note'
-  | 'orders' | 'prescriptions' | 'dx-cpt' | 'checkout';
+  | 'orders' | 'dx-cpt' | 'checkout';
 
 export interface StepDef {
   index: number;
@@ -117,15 +117,20 @@ export interface StepDef {
   icon: string;
 }
 
+/**
+ * The 7 encounter steps that ship in the mobile app. Note: Prescriptions is
+ * intentionally NOT included — it's currently disabled on the web too.
+ * When / if prescriptions re-lands on web, add it back between Orders and
+ * Dx & CPT and renumber indices.
+ */
 export const ENCOUNTER_STEPS: readonly StepDef[] = [
-  { index: 0, key: 'vitals',        label: 'Vitals',             owner: 'nurse',     hasVoiceBar: true,  icon: 'pulse-outline' },
-  { index: 1, key: 'history',       label: 'History Review',     owner: 'nurse',     hasVoiceBar: true,  icon: 'people-outline' },
-  { index: 2, key: 'cc-hpi',        label: 'CC & HPI',           owner: 'nurse',     hasVoiceBar: true,  icon: 'chatbubble-ellipses-outline' },
-  { index: 3, key: 'note',          label: 'Clinical Note',      owner: 'clinician', hasVoiceBar: false, icon: 'document-text-outline' },
-  { index: 4, key: 'orders',        label: 'Orders & Referrals', owner: 'clinician', hasVoiceBar: false, icon: 'clipboard-outline' },
-  { index: 5, key: 'prescriptions', label: 'Prescriptions',      owner: 'clinician', hasVoiceBar: false, icon: 'medkit-outline' },
-  { index: 6, key: 'dx-cpt',        label: 'Dx & CPT Codes',     owner: 'clinician', hasVoiceBar: false, icon: 'pricetags-outline' },
-  { index: 7, key: 'checkout',      label: 'Checkout',           owner: 'clinician', hasVoiceBar: false, icon: 'checkmark-circle-outline' },
+  { index: 0, key: 'vitals',   label: 'Vitals',             owner: 'nurse',     hasVoiceBar: true,  icon: 'pulse-outline' },
+  { index: 1, key: 'history',  label: 'History Review',     owner: 'nurse',     hasVoiceBar: true,  icon: 'people-outline' },
+  { index: 2, key: 'cc-hpi',   label: 'CC & HPI',           owner: 'nurse',     hasVoiceBar: true,  icon: 'chatbubble-ellipses-outline' },
+  { index: 3, key: 'note',     label: 'Clinical Note',      owner: 'clinician', hasVoiceBar: false, icon: 'document-text-outline' },
+  { index: 4, key: 'orders',   label: 'Orders & Referrals', owner: 'clinician', hasVoiceBar: false, icon: 'clipboard-outline' },
+  { index: 5, key: 'dx-cpt',   label: 'Dx & CPT Codes',     owner: 'clinician', hasVoiceBar: false, icon: 'pricetags-outline' },
+  { index: 6, key: 'checkout', label: 'Checkout',           owner: 'clinician', hasVoiceBar: false, icon: 'checkmark-circle-outline' },
 ];
 
 export function defaultStepForRole(role: UserRole): number {
