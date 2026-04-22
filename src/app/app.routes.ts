@@ -35,6 +35,14 @@ export const routes: Routes = [
       import('./features/schedule/schedule.page').then((m) => m.SchedulePage),
   },
   {
+    path: 'appointment/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/appointment-detail/appointment-detail.page').then(
+        (m) => m.AppointmentDetailPage,
+      ),
+  },
+  {
     // wildcard fallback
     path: '**',
     redirectTo: '/schedule',

@@ -1,0 +1,139 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="back()" aria-label="Back">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Appointment Details</ion-title>
+    <ion-buttons slot="end">
+      <ion-button aria-label="Options">
+        <ion-icon slot="icon-only" name="ellipsis-horizontal"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ad">
+  @if (loading() && !detail()) {
+    <div class="center">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  } @else if (detail(); as d) {
+    <div class="page">
+      <!-- Patient header -->
+      <div class="patient-card">
+        <div class="avatar">{{ initials() }}</div>
+        <div class="meta">
+          <h2>{{ d.patientName ?? 'Patient' }}</h2>
+          <p class="muted small">
+            @if (d.patientGender) { {{ d.patientGender }} · }
+            @if (d.patientDob) { <!-- age could be computed client-side -->DOB {{ d.patientDob | date:'MMM d, y' }} · }
+            MRN {{ d.patientMrn ?? '—' }}
+          </p>
+          @if (d.patientPhone) {
+            <p class="muted tiny">
+              <ion-icon name="call-outline"></ion-icon> {{ d.patientPhone }}
+            </p>
+          }
+        </div>
+        @if (meta()) {
+          <span class="imehr-chip" [class]="statusCls()">{{ meta()!.label }}</span>
+        }
+      </div>
+
+      <!-- Info cards -->
+      <div class="info-grid">
+        <div class="info-card">
+          <h4><ion-icon name="time-outline"></ion-icon> Time</h4>
+          <p><strong>{{ d.startTime | date:'fullDate' }}</strong></p>
+          <p class="muted small">{{ timeRange() }}</p>
+        </div>
+        <div class="info-card">
+          <h4><ion-icon name="pricetag-outline"></ion-icon> Type</h4>
+          <p><strong>{{ d.typeName ?? 'Visit' }}</strong></p>
+        </div>
+      </div>
+
+      <div class="info-card full">
+        <h4><ion-icon name="person-outline"></ion-icon> Provider</h4>
+        <p><strong>{{ d.providerName ?? '—' }}</strong></p>
+        @if (d.locationName || d.roomNumber) {
+          <p class="muted small">
+            {{ d.locationName ?? 'Main Clinic' }}
+            @if (d.roomNumber) { · {{ d.roomNumber }} }
+          </p>
+        }
+      </div>
+
+      @if (d.reason) {
+        <div class="info-card full">
+          <h4><ion-icon name="chatbubble-ellipses-outline"></ion-icon> Reason for Visit</h4>
+          <p>{{ d.reason }}</p>
+        </div>
+      }
+
+      @if (d.insurancePayer) {
+        <div class="info-card full">
+          <h4><ion-icon name="document-text-outline"></ion-icon> Insurance</h4>
+          <p><strong>{{ d.insurancePayer }}</strong>@if (d.insuranceMemberId) { · #{{ d.insuranceMemberId }} }</p>
+          @if (d.eligibilityVerified) {
+            <span class="imehr-chip success">
+              <ion-icon name="checkmark-circle"></ion-icon> Eligibility verified
+            </span>
+          }
+        </div>
+      }
+
+      @if (d.isTelehealth && d.telehealthUrl) {
+        <div class="info-card full telehealth">
+          <h4><ion-icon name="videocam-outline"></ion-icon> Telehealth</h4>
+          <p class="muted small">Patient joins via a secure video link.</p>
+          <button class="btn ghost" (click)="openTelehealth()">
+            <ion-icon name="copy-outline"></ion-icon> Copy link
+          </button>
+        </div>
+      }
+
+      <!-- Consent / eligibility chips -->
+      <div class="chip-row">
+        @if (d.consentSigned) {
+          <span class="imehr-chip success">
+            <ion-icon name="checkmark-circle"></ion-icon> Consent signed
+          </span>
+        }
+      </div>
+
+      <!-- Primary actions (status-aware) -->
+      <div class="actions">
+        @if (isScheduledOrConfirmed()) {
+          <button class="btn primary" (click)="checkIn()" [disabled]="acting()">
+            @if (acting()) { <ion-spinner name="crescent"></ion-spinner> }
+            @else { <ion-icon name="log-in-outline"></ion-icon> Check In }
+          </button>
+        }
+        @if (isCheckedIn()) {
+          <button class="btn primary warn" (click)="startVisit()" [disabled]="acting()">
+            @if (acting()) { <ion-spinner name="crescent"></ion-spinner> }
+            @else { <ion-icon name="play-circle-outline"></ion-icon> Start Visit }
+          </button>
+        }
+        @if (isInProgress()) {
+          <button class="btn primary success" (click)="resumeVisit()" [disabled]="acting()">
+            <ion-icon name="play-forward-outline"></ion-icon> Resume Visit
+          </button>
+        }
+        @if (isCompleted()) {
+          <button class="btn ghost" disabled>
+            <ion-icon name="document-text-outline"></ion-icon> View signed note (Phase 3)
+          </button>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="center">
+      <p class="muted">Could not load appointment.</p>
+      <button class="btn ghost" (click)="back()">Back to schedule</button>
+    </div>
+  }
+</ion-content>
