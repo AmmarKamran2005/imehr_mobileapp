@@ -1,0 +1,72 @@
+<ion-content [fullscreen]="true" class="login-content">
+  <div class="login-wrap">
+    <section class="hero">
+      <div class="brand-mark">
+        <ion-icon name="medkit"></ion-icon>
+      </div>
+      <h1 class="brand-title">IMEHR</h1>
+      <p class="brand-sub">CLINICIAN</p>
+    </section>
+
+    <form class="form" (ngSubmit)="submit()" #f="ngForm" novalidate>
+      <h2>Sign In</h2>
+      <p class="muted">Internal Medicine EHR</p>
+
+      <label class="field">
+        <span class="field-label">Email</span>
+        <div class="imehr-field">
+          <ion-icon name="mail-outline"></ion-icon>
+          <input
+            type="email"
+            name="email"
+            autocomplete="email"
+            inputmode="email"
+            [(ngModel)]="email"
+            required
+            [disabled]="submitting()"
+          />
+        </div>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Password</span>
+        <div class="imehr-field">
+          <ion-icon name="lock-closed-outline"></ion-icon>
+          <input
+            [type]="showPw() ? 'text' : 'password'"
+            name="password"
+            autocomplete="current-password"
+            [(ngModel)]="password"
+            required
+            [disabled]="submitting()"
+          />
+          <button type="button" class="icon-btn" (click)="togglePw()" aria-label="Toggle password">
+            <ion-icon [name]="showPw() ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </button>
+        </div>
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" name="rememberDevice" [(ngModel)]="rememberDevice" [disabled]="submitting()" />
+        <span>Remember this device for 15 days <span class="muted-soft">(skip verification code next time)</span></span>
+      </label>
+
+      <p class="error" *ngIf="errorMsg() as err">
+        <ion-icon name="alert-circle-outline"></ion-icon> {{ err }}
+      </p>
+
+      <button class="btn btn-primary btn-block" type="submit" [disabled]="submitting()">
+        <ion-spinner *ngIf="submitting()" name="crescent"></ion-spinner>
+        <ng-container *ngIf="!submitting()">
+          <ion-icon name="log-in-outline"></ion-icon> Sign In
+        </ng-container>
+      </button>
+
+      <a class="link" routerLink="/forgot-password">Forgot password?</a>
+    </form>
+
+    <footer class="foot">
+      <span class="muted-soft tiny">IMEHR · v0.1.0</span>
+    </footer>
+  </div>
+</ion-content>

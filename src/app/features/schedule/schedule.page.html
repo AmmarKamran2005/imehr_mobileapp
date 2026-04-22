@@ -1,0 +1,36 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Schedule</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleTheme()" aria-label="Toggle theme">
+        <ion-icon slot="icon-only" name="contrast-outline"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()" aria-label="Log out">
+        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="sched-content">
+  <div class="sched-wrap">
+    <p class="muted small">Good morning,</p>
+    <h1>{{ greeting() }}</h1>
+    <p class="role-chip" *ngIf="roleChip()">
+      <ion-icon name="medkit-outline"></ion-icon> {{ roleChip() }}
+    </p>
+
+    <div class="card" *ngIf="!online()">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      <p>You're offline. Some features will be unavailable until reconnected.</p>
+    </div>
+
+    <div class="card">
+      <h3>Phase 1 — coming next</h3>
+      <p class="muted small">
+        Today's appointments, active visit banner, check-in / start-visit / resume-visit flows,
+        and the 8-step encounter wizard are being implemented next.
+      </p>
+    </div>
+  </div>
+</ion-content>

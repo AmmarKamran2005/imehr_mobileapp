@@ -1,0 +1,130 @@
+/* ============================================================
+   IMEHR theme — Ionic CSS variables, light + dark.
+   Palette mirrors the mockup (and the IMEHR web brand tokens).
+   ============================================================ */
+
+/* Brand */
+:root {
+  /* IMEHR primary (blue) */
+  --imehr-primary: #0b63ce;
+  --imehr-primary-shade: #0a57b3;
+  --imehr-primary-tint: #3b82db;
+  --imehr-primary-50:  #eaf2fd;
+  --imehr-primary-100: #d4e4fb;
+
+  /* Ionic primary mapped to brand */
+  --ion-color-primary: var(--imehr-primary);
+  --ion-color-primary-rgb: 11, 99, 206;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--imehr-primary-shade);
+  --ion-color-primary-tint: var(--imehr-primary-tint);
+
+  /* Success / warning / danger */
+  --ion-color-success: #16a34a;
+  --ion-color-success-rgb: 22, 163, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #138a3f;
+  --ion-color-success-tint: #2cb45f;
+
+  --ion-color-warning: #d97706;
+  --ion-color-warning-rgb: 217, 119, 6;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #b56404;
+  --ion-color-warning-tint: #ea8a1e;
+
+  --ion-color-danger: #dc2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #b91c1c;
+  --ion-color-danger-tint: #ef4444;
+
+  /* Surfaces (light mode) */
+  --ion-background-color: #f4f6fa;
+  --ion-background-color-rgb: 244, 246, 250;
+  --ion-item-background: #ffffff;
+  --ion-toolbar-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-tab-bar-background: #ffffff;
+
+  --ion-text-color: #0f172a;
+  --ion-text-color-rgb: 15, 23, 42;
+
+  --imehr-border: #e5e9f0;
+  --imehr-border-strong: #d1d7e0;
+  --imehr-text-2: #475569;
+  --imehr-text-3: #94a3b8;
+  --imehr-surface-2: #f9fafc;
+
+  --ion-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Radii */
+  --imehr-radius-sm: 8px;
+  --imehr-radius:    14px;
+  --imehr-radius-lg: 20px;
+  --imehr-radius-xl: 28px;
+
+  /* Elevation */
+  --imehr-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --imehr-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --imehr-shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+/* ============================================================
+   Dark mode — activated via .dark-theme body class OR
+   prefers-color-scheme: dark when user picks "Auto".
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  body.auto-theme {
+    --ion-background-color: #0b1120;
+    --ion-background-color-rgb: 11, 17, 32;
+    --ion-item-background: #121a2b;
+    --ion-toolbar-background: #121a2b;
+    --ion-card-background: #121a2b;
+    --ion-tab-bar-background: #121a2b;
+
+    --ion-text-color: #f1f5f9;
+    --ion-text-color-rgb: 241, 245, 249;
+
+    --imehr-border: #1e293b;
+    --imehr-border-strong: #2a3a55;
+    --imehr-text-2: #cbd5e1;
+    --imehr-text-3: #64748b;
+    --imehr-surface-2: #0f1726;
+
+    --imehr-primary-50:  #152841;
+    --imehr-primary-100: #1b3557;
+
+    --imehr-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --imehr-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+    --imehr-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+}
+
+body.dark-theme {
+  --ion-background-color: #0b1120;
+  --ion-background-color-rgb: 11, 17, 32;
+  --ion-item-background: #121a2b;
+  --ion-toolbar-background: #121a2b;
+  --ion-card-background: #121a2b;
+  --ion-tab-bar-background: #121a2b;
+
+  --ion-text-color: #f1f5f9;
+  --ion-text-color-rgb: 241, 245, 249;
+
+  --imehr-border: #1e293b;
+  --imehr-border-strong: #2a3a55;
+  --imehr-text-2: #cbd5e1;
+  --imehr-text-3: #64748b;
+  --imehr-surface-2: #0f1726;
+
+  --imehr-primary-50:  #152841;
+  --imehr-primary-100: #1b3557;
+
+  --imehr-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --imehr-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --imehr-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.55);
+}

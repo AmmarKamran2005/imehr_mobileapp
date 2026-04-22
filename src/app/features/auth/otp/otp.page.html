@@ -1,0 +1,56 @@
+<ion-content [fullscreen]="true" class="otp-content">
+  <div class="otp-wrap">
+    <button class="icon-btn back" (click)="backToLogin()" aria-label="Back to login">
+      <ion-icon name="arrow-back-outline"></ion-icon>
+    </button>
+
+    <section class="hero">
+      <div class="icon-lg">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+      </div>
+      <h1>Verify Your Identity</h1>
+      <p class="muted">We sent a 6-digit verification code.</p>
+    </section>
+
+    <form (ngSubmit)="submit()" class="form" novalidate>
+      <div class="otp-single">
+        <input
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          pattern="[0-9]{6}"
+          maxlength="6"
+          placeholder="000000"
+          [value]="code"
+          (input)="onInput($event)"
+          [disabled]="submitting()"
+        />
+      </div>
+      <p class="muted-soft small center">Code expires in 5 minutes</p>
+
+      <p class="error" *ngIf="errorMsg() as err">
+        <ion-icon name="alert-circle-outline"></ion-icon> {{ err }}
+      </p>
+
+      <button class="btn btn-primary btn-block" type="submit" [disabled]="submitting() || code.length !== 6">
+        <ion-spinner *ngIf="submitting()" name="crescent"></ion-spinner>
+        <ng-container *ngIf="!submitting()">
+          <ion-icon name="checkmark-circle-outline"></ion-icon> Verify &amp; Sign In
+        </ng-container>
+      </button>
+
+      <button type="button" class="btn-link" (click)="resend()" [disabled]="resendInSec() > 0">
+        <ng-container *ngIf="resendInSec() > 0">
+          Didn't receive a code? Resend in {{ resendInSec() }}s
+        </ng-container>
+        <ng-container *ngIf="resendInSec() === 0">
+          Didn't receive a code? Resend
+        </ng-container>
+      </button>
+
+      <button type="button" class="btn-link" (click)="backToLogin()">
+        <ion-icon name="arrow-back-outline"></ion-icon> Back to login
+      </button>
+    </form>
+  </div>
+</ion-content>

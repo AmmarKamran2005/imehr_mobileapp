@@ -1,0 +1,127 @@
+.otp-content { --background: var(--ion-background-color); }
+
+.otp-wrap {
+  min-height: 100%;
+  padding: 12px 20px 28px;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.back {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: transparent;
+  border: 0;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--ion-text-color);
+  ion-icon { font-size: 22px; }
+  &:hover { background: var(--imehr-surface-2); }
+}
+
+.hero {
+  text-align: center;
+  padding: 48px 0 20px;
+}
+.icon-lg {
+  width: 96px;
+  height: 96px;
+  border-radius: 26px;
+  margin: 0 auto 20px;
+  background: var(--imehr-primary-50);
+  color: var(--ion-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  ion-icon { font-size: 48px; }
+}
+.hero h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.hero .muted {
+  margin: 0;
+  color: var(--imehr-text-2);
+  font-size: 14px;
+}
+
+.form .otp-single {
+  width: 100%;
+  margin: 16px 0 6px;
+}
+.form .otp-single input {
+  width: 100%;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  padding: 16px 0;
+  border: 1.5px solid var(--imehr-border);
+  border-radius: var(--imehr-radius);
+  background: var(--ion-item-background);
+  color: var(--ion-text-color);
+  font-family: inherit;
+}
+.form .otp-single input:focus {
+  outline: 0;
+  border-color: var(--ion-color-primary);
+  box-shadow: 0 0 0 4px var(--imehr-primary-50);
+}
+
+.center { text-align: center; }
+.small { font-size: 12.5px; }
+
+.error {
+  color: var(--ion-color-danger);
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: var(--imehr-radius);
+  font-size: 15px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn:disabled { opacity: 0.65; cursor: not-allowed; }
+.btn-primary {
+  background: var(--ion-color-primary);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(11, 99, 206, 0.3);
+}
+.btn-block { width: 100%; margin-top: 16px; }
+
+.btn-link {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--imehr-text-2);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 12px 0 2px;
+  cursor: pointer;
+
+  ion-icon { vertical-align: middle; margin-right: 4px; font-size: 14px; }
+}
+.btn-link:disabled { cursor: default; }
+.btn-link:not(:disabled):hover { color: var(--ion-color-primary); }

@@ -1,0 +1,23 @@
+<ion-content [fullscreen]="true" class="bio-content">
+  <div class="bio-wrap">
+    <div class="icon-xl">
+      <ion-icon name="finger-print-outline"></ion-icon>
+    </div>
+    <h1>Sign in faster next time</h1>
+    <p class="muted">
+      Use <strong>{{ kindLabel() }}</strong> to sign in to IMEHR without typing your password.
+    </p>
+
+    <div class="stack">
+      <button class="btn btn-primary btn-block" (click)="enable()" [disabled]="submitting()">
+        <ion-icon name="finger-print"></ion-icon>
+        Enable {{ kindLabel() }}
+      </button>
+      <button class="btn btn-ghost btn-block" (click)="skip()" [disabled]="submitting()">
+        Skip for now
+      </button>
+    </div>
+
+    <p class="muted-soft tiny center">You can change this later in Settings → Biometric sign-in.</p>
+  </div>
+</ion-content>
