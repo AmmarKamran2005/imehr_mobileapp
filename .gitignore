@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+www/
+.angular/
+
+# iOS / Android / Capacitor
+ios/App/build/
+ios/App/Pods/
+ios/App/Podfile.lock
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+android/app/release/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Editor config / tooling
+.history/
+*.tmp
+
+# Capacitor sync artifacts
+capacitor.config.*.ts

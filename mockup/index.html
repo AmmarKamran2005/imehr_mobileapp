@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>IMEHR — Mobile Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <link rel="stylesheet" href="styles.css?v=5" />
+</head>
+<body>
+<div class="device-wrap">
+  <div class="device">
+    <div class="device-notch"></div>
+
+    <div class="status-bar">
+      <span class="status-time">9:41</span>
+      <span class="status-icons"><ion-icon name="cellular"></ion-icon><ion-icon name="wifi"></ion-icon><ion-icon name="battery-full"></ion-icon></span>
+    </div>
+
+    <div class="conn-banner" id="conn-banner" hidden>
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      <span>You're offline. Changes will sync when reconnected.</span>
+    </div>
+
+    <main class="screens" id="screens">
+
+      <!-- ============ LOGIN ============ -->
+      <section class="screen" data-screen="login">
+        <div class="auth-hero">
+          <div class="brand-mark"><ion-icon name="medkit"></ion-icon></div>
+          <h1 class="brand-title">IMEHR</h1>
+          <p class="brand-sub" id="login-role-sub">CLINICIAN</p>
+        </div>
+
+        <form class="auth-form" onsubmit="event.preventDefault(); App.submitLogin();">
+          <h2 class="auth-heading">Sign In</h2>
+          <p class="auth-muted">Internal Medicine EHR</p>
+
+          <label class="field">
+            <span class="field-label">Email</span>
+            <div class="field-input">
+              <ion-icon name="mail-outline"></ion-icon>
+              <input type="email" id="login-email" value="james@testmd.com" autocomplete="email" />
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Password</span>
+            <div class="field-input">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              <input type="password" value="Demo@123" id="login-pw" />
+              <button type="button" class="icon-btn" onclick="App.togglePw('login-pw', this)">
+                <ion-icon name="eye-outline"></ion-icon>
+              </button>
+            </div>
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" checked />
+            <span>Remember this device for 15 days <span class="muted small">(skip verification code next time)</span></span>
+          </label>
+
+          <button class="btn btn-primary btn-block" type="submit">
+            <ion-icon name="log-in-outline"></ion-icon> Sign In
+          </button>
+
+          <div class="role-demo-picker">
+            <span class="muted small">Demo as:</span>
+            <button type="button" data-demo-role="clinician" class="active" onclick="App.pickDemoRole('clinician')"><ion-icon name="medkit-outline"></ion-icon> Clinician</button>
+            <button type="button" data-demo-role="nurse" onclick="App.pickDemoRole('nurse')"><ion-icon name="heart-outline"></ion-icon> Nurse</button>
+          </div>
+        </form>
+
+        <div class="auth-footer"><span>v1.0.0 (mockup)</span></div>
+      </section>
+
+      <!-- ============ OTP ============ -->
+      <section class="screen" data-screen="otp" hidden>
+        <header class="topbar">
+          <button class="icon-btn" onclick="App.go('login')"><ion-icon name="arrow-back-outline"></ion-icon></button>
+          <h1 class="topbar-title"></h1>
+          <div class="topbar-spacer"></div>
+        </header>
+        <div class="auth-body center-all">
+          <div class="auth-icon lg"><ion-icon name="shield-checkmark-outline"></ion-icon></div>
+          <h2 class="auth-heading">Verify Your Identity</h2>
+          <p class="auth-muted">We sent a 6-digit verification code to<br/><strong id="otp-email">james@testmd.com</strong></p>
+
+          <div class="otp-single">
+            <input type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" value="123456" />
+          </div>
+          <p class="auth-muted small center">Code expires in 5 minutes</p>
+
+          <button class="btn btn-primary btn-block" onclick="App.go('biometric')">
+            <ion-icon name="checkmark-circle-outline"></ion-icon> Verify &amp; Sign In
+          </button>
+          <button class="btn btn-link" onclick="App.toast('Code resent')">Didn't receive a code? Resend</button>
+          <button class="btn btn-link" onclick="App.go('login')"><ion-icon name="arrow-back"></ion-icon> Back to login</button>
+        </div>
+      </section>
+
+      <!-- ============ BIOMETRIC (mobile-only UX add) ============ -->
+      <section class="screen" data-screen="biometric" hidden>
+        <div class="auth-body center-all">
+          <div class="auth-icon lg"><ion-icon name="finger-print-outline"></ion-icon></div>
+          <h2 class="auth-heading">Sign in faster next time</h2>
+          <p class="auth-muted">Use Face ID or Fingerprint to sign in without typing your password.</p>
+          <div class="stack">
+            <button class="btn btn-primary btn-block" onclick="App.go('schedule'); App.toast('Biometric enabled')"><ion-icon name="finger-print"></ion-icon> Enable biometric</button>
+            <button class="btn btn-ghost btn-block" onclick="App.go('schedule')">Skip for now</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCHEDULE / DASHBOARD (TAB) ============ -->
+      <section class="screen tab-screen" data-screen="schedule" hidden>
+        <header class="topbar-lg">
+          <div class="topbar-row">
+            <div>
+              <p class="muted small" id="greeting-line">Good morning</p>
+              <h1 class="topbar-h1" id="greeting-name">Dr. James Wilson</h1>
+              <span class="role-badge" id="role-badge"><ion-icon name="medkit-outline"></ion-icon><span id="role-badge-label">Clinician</span></span>
+            </div>
+            <button class="icon-btn big" onclick="App.toast('No new notifications')">
+              <ion-icon name="notifications-outline"></ion-icon><span class="dot"></span>
+            </button>
+          </div>
+
+          <!-- Global patient search (mirrors web header) -->
+          <div class="search-bar" onclick="App.goTab('patients')">
+            <ion-icon name="search-outline"></ion-icon>
+            <input placeholder="Search patient by name, MRN…" readonly />
+          </div>
+
+          <div class="date-strip" id="date-strip"></div>
+
+          <!-- Active Visit banner (green, success) -->
+          <div class="active-visit-banner" id="resume-banner" hidden onclick="App.resumeEncounter()">
+            <ion-icon name="play-circle"></ion-icon>
+            <div>
+              <p class="rb-title">Active Visit</p>
+              <p class="muted small"><span id="rb-patient">Emma Martinez</span> · Dr. Wilson · Started 10:00 AM</p>
+            </div>
+            <span class="btn btn-primary sm">Resume Visit</span>
+          </div>
+
+          <!-- Stat cards (mirror web: Today / Pending Orders / No Show / Missed) -->
+          <div class="stats-row" id="stats-row"></div>
+        </header>
+
+        <div class="content">
+          <div class="section-head">
+            <h2 class="section-title">Today Appointments</h2>
+            <button class="chip-btn" onclick="App.toast('Filter')"><ion-icon name="options-outline"></ion-icon> Filter</button>
+          </div>
+          <div class="appt-list" id="appt-list"></div>
+        </div>
+      </section>
+
+      <!-- ============ APPOINTMENT DETAIL ============ -->
+      <section class="screen" data-screen="appt-detail" hidden>
+        <header class="topbar">
+          <button class="icon-btn" onclick="App.go('schedule')"><ion-icon name="arrow-back-outline"></ion-icon></button>
+          <h1 class="topbar-title">Appointment Details</h1>
+          <button class="icon-btn" onclick="App.toast('Options')"><ion-icon name="ellipsis-horizontal"></ion-icon></button>
+        </header>
+
+        <div class="content">
+          <div class="patient-card" onclick="App.go('patient-detail')">
+            <div class="avatar avatar-lg">EM</div>
+            <div class="patient-meta">
+              <h2 class="patient-name">Emma Martinez</h2>
+              <p class="muted">F · 34 yrs · MRN 102384</p>
+              <p class="muted small"><ion-icon name="call-outline"></ion-icon> (555) 201-8844</p>
+            </div>
+            <ion-icon name="chevron-forward" class="muted"></ion-icon>
+          </div>
+
+          <div class="info-cards-2">
+            <div class="info-card sm">
+              <h4><ion-icon name="time-outline"></ion-icon> Time</h4>
+              <p><strong>Today</strong></p>
+              <p class="muted small">10:00 AM – 10:30 AM</p>
+            </div>
+            <div class="info-card sm">
+              <h4><ion-icon name="pricetag-outline"></ion-icon> Type &amp; Status</h4>
+              <p><strong>Follow-Up</strong></p>
+              <p><span class="chip sm" id="appt-status-chip">Scheduled</span></p>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h4><ion-icon name="person-outline"></ion-icon> Provider</h4>
+            <p><strong>Dr. James Wilson</strong></p>
+            <p class="muted small">Main Clinic · Room 3</p>
+          </div>
+
+          <div class="info-card">
+            <h4><ion-icon name="chatbubble-ellipses-outline"></ion-icon> Reason for Visit</h4>
+            <p>Follow-up · Hypertension management. BP readings improving on lisinopril.</p>
+          </div>
+
+          <div class="info-card">
+            <h4><ion-icon name="document-text-outline"></ion-icon> Insurance</h4>
+            <p><strong>Blue Cross</strong> · #BC44219083</p>
+            <span class="chip sm chip-success"><ion-icon name="shield-checkmark"></ion-icon> Eligibility verified</span>
+          </div>
+
+          <!-- Visit progress (when in progress) -->
+          <div class="enc-progress-card" id="appt-enc-progress" hidden>
+            <div class="section-head"><h3 class="section-title sm">Visit Progress</h3></div>
+            <div class="enc-progress-dots" id="appt-progress-dots"></div>
+          </div>
+
+          <!-- Clinical Notes for this appointment -->
+          <div class="section-head"><h2 class="section-title">Clinical Notes</h2></div>
+          <div class="note-list-compact">
+            <div class="note-item" onclick="App.openSignedNote()">
+              <div>
+                <p class="note-title">SOAP Note</p>
+                <p class="muted small">Mar 8, 2026 · Dr. Wilson</p>
+              </div>
+              <span class="chip sm chip-success">Signed</span>
+            </div>
+          </div>
+
+          <div class="action-stack" id="appt-actions"></div>
+        </div>
+      </section>
+
+      <!-- ============ ENCOUNTER WIZARD ============ -->
+      <section class="screen" data-screen="encounter" hidden>
+        <header class="topbar enc-topbar">
+          <button class="icon-btn" onclick="App.exitEncounter()"><ion-icon name="close-outline"></ion-icon></button>
+          <div class="enc-patient-chip" onclick="App.go('patient-detail')">
+            <div class="avatar avatar-sm">EM</div>
+            <div>
+              <p class="note-title">Emma Martinez</p>
+              <p class="muted small">MRN 102384 · Follow-Up</p>
+            </div>
+          </div>
+          <button class="icon-btn" onclick="App.openSheet('enc-menu-sheet')"><ion-icon name="ellipsis-horizontal"></ion-icon></button>
+        </header>
+
+        <div class="save-strip">
+          <span class="save-dot" id="save-dot"></span>
+          <span id="save-text">Saved</span>
+          <span class="grow"></span>
+          <span class="role-badge sm" id="enc-role-badge"><ion-icon name="medkit-outline"></ion-icon>Clinician</span>
+        </div>
+
+        <div class="stepper" id="stepper"></div>
+
+        <!-- Unified Voice Bar (steps 0, 1, 2) -->
+        <div class="voice-bar" id="voice-bar" hidden>
+          <button class="vb-record" id="vb-record" onclick="App.toggleVoice()"><ion-icon name="mic-outline"></ion-icon></button>
+          <div class="vb-body">
+            <p class="vb-title" id="vb-title">Start AI Voice Entry</p>
+            <p class="vb-meta muted small" id="vb-meta">Fills Vitals, History Review &amp; CC/HPI from your conversation</p>
+          </div>
+          <button class="icon-btn" id="vb-expand" onclick="App.toggleVoicePanel()"><ion-icon name="chevron-down"></ion-icon></button>
+        </div>
+        <div class="voice-panel" id="voice-panel" hidden>
+          <div class="vb-transcript">
+            <p class="muted small">Live transcription</p>
+            <p id="vb-transcript-text">Patient reports improved blood pressure control since last visit. No chest pain, no dyspnea. Currently taking lisinopril ten milligrams daily. BP at home averaging one-twenty-five over eighty…</p>
+            <div class="vb-levelbar"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <p class="muted small">0 segments · Processing…</p>
+          </div>
+        </div>
+
+        <div class="step-panes" id="step-panes">
+
+          <!-- STEP 0: VITALS -->
+          <div class="step-pane" data-step="0" hidden>
+            <h2 class="step-title">Vitals</h2>
+            <p class="muted">Enter vitals manually or use AI Voice Entry above.</p>
+            <div class="vital-grid">
+              <div class="vital-card"><label>Systolic BP</label><div class="vital-input"><input type="number" value="128" /><span>mmHg</span></div></div>
+              <div class="vital-card"><label>Diastolic BP</label><div class="vital-input"><input type="number" value="82" /><span>mmHg</span></div></div>
+              <div class="vital-card"><label>Heart Rate</label><div class="vital-input"><input type="number" value="76" /><span>bpm</span></div></div>
+              <div class="vital-card"><label>Temperature</label><div class="vital-input"><input type="number" step="0.1" value="98.4" /><span>°F</span></div></div>
+              <div class="vital-card"><label>SpO₂</label><div class="vital-input"><input type="number" value="98" /><span>%</span></div></div>
+              <div class="vital-card"><label>Respiratory Rate</label><div class="vital-input"><input type="number" value="16" /><span>/min</span></div></div>
+              <div class="vital-card"><label>Weight</label><div class="vital-input"><input type="number" step="0.1" id="vital-weight" value="142.0" oninput="App.recalcBMI()" /><span>lbs</span></div></div>
+              <div class="vital-card"><label>Height</label><div class="vital-input"><input type="number" step="0.1" id="vital-height" value="65.0" oninput="App.recalcBMI()" /><span>in</span></div></div>
+              <div class="vital-card highlight"><label>BMI <span class="muted small">auto</span></label><div class="vital-input"><input type="text" id="vital-bmi" value="23.6" readonly /><span>kg/m²</span></div></div>
+              <div class="vital-card"><label>Pain <span class="muted small">0–10</span></label><div class="vital-input"><input type="number" min="0" max="10" value="0" /><span>/10</span></div></div>
+            </div>
+            <div class="section-head"><h3 class="section-title sm">Previous visit</h3></div>
+            <div class="prev-vitals">
+              <div><span>BP</span><strong>134/86</strong></div>
+              <div><span>HR</span><strong>78</strong></div>
+              <div><span>Temp</span><strong>98.6°F</strong></div>
+              <div><span>BMI</span><strong>23.4</strong></div>
+            </div>
+          </div>
+
+          <!-- STEP 1: HISTORY REVIEW -->
+          <div class="step-pane" data-step="1" hidden>
+            <h2 class="step-title">History Review</h2>
+            <p class="muted">Review and update patient history.</p>
+
+            <div class="hx-section">
+              <div class="hx-head"><div><ion-icon name="warning-outline" class="hx-ico warn"></ion-icon><h3>Allergies</h3></div><button class="chip-btn"><ion-icon name="add"></ion-icon> Add</button></div>
+              <div class="hx-list">
+                <div class="hx-item"><strong>Penicillin</strong><span class="chip sm chip-danger">Severe · Rash</span></div>
+                <div class="hx-item"><strong>Shellfish</strong><span class="chip sm chip-warning">Mild</span></div>
+              </div>
+            </div>
+
+            <div class="hx-section">
+              <div class="hx-head"><div><ion-icon name="medkit-outline" class="hx-ico primary"></ion-icon><h3>Active medications</h3></div><button class="chip-btn"><ion-icon name="add"></ion-icon> Add</button></div>
+              <div class="hx-list">
+                <div class="hx-item"><strong>Lisinopril 10 mg</strong><span class="muted small">PO daily · 2024-01</span></div>
+                <div class="hx-item"><strong>Atorvastatin 20 mg</strong><span class="muted small">PO QHS · 2023-08</span></div>
+              </div>
+            </div>
+
+            <div class="hx-section">
+              <div class="hx-head"><div><ion-icon name="pulse-outline" class="hx-ico primary"></ion-icon><h3>Active problems</h3></div><button class="chip-btn"><ion-icon name="add"></ion-icon> Add</button></div>
+              <div class="hx-list">
+                <div class="hx-item"><strong>Essential hypertension</strong><span class="muted small">I10 · Since 2023</span></div>
+                <div class="hx-item"><strong>Hyperlipidemia</strong><span class="muted small">E78.5 · Since 2023</span></div>
+              </div>
+            </div>
+
+            <div class="hx-section">
+              <div class="hx-head"><div><ion-icon name="people-outline" class="hx-ico primary"></ion-icon><h3>Family history</h3></div><button class="chip-btn"><ion-icon name="add"></ion-icon> Add</button></div>
+              <div class="hx-list">
+                <div class="hx-item"><strong>Mother</strong><span class="muted small">HTN, T2DM</span></div>
+                <div class="hx-item"><strong>Father</strong><span class="muted small">MI (age 62)</span></div>
+              </div>
+            </div>
+
+            <div class="hx-section">
+              <div class="hx-head"><div><ion-icon name="cafe-outline" class="hx-ico primary"></ion-icon><h3>Social history</h3></div><button class="chip-btn"><ion-icon name="add"></ion-icon> Add</button></div>
+              <div class="hx-list">
+                <div class="hx-item"><strong>Tobacco</strong><span class="muted small">Never</span></div>
+                <div class="hx-item"><strong>Alcohol</strong><span class="muted small">Occasional, 2-3/wk</span></div>
+              </div>
+            </div>
+
+            <div class="hx-section">
+              <div class="hx-head"><div><ion-icon name="shield-checkmark-outline" class="hx-ico primary"></ion-icon><h3>Immunizations</h3></div><button class="chip-btn"><ion-icon name="add"></ion-icon> Add</button></div>
+              <div class="hx-list">
+                <div class="hx-item"><strong>Influenza</strong><span class="muted small">Oct 2025</span></div>
+                <div class="hx-item"><strong>COVID-19</strong><span class="muted small">Sep 2025</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2: CC & HPI -->
+          <div class="step-pane" data-step="2" hidden>
+            <h2 class="step-title">CC &amp; HPI</h2>
+            <p class="muted">Speak naturally — fields will fill as you talk.</p>
+
+            <label class="field">
+              <span class="field-label">Chief Complaint</span>
+              <div class="field-input">
+                <ion-icon name="chatbubble-outline"></ion-icon>
+                <input type="text" value="Follow-up for hypertension" />
+              </div>
+            </label>
+
+            <div class="note-section">
+              <label class="section-label">History of Present Illness</label>
+              <textarea rows="8">34 y/o female with essential HTN presents for 3-month follow-up. Reports improved BP control since increasing lisinopril. No chest pain, shortness of breath, palpitations, or dizziness. Medication adherence good. Diet: reduced salt intake, walking 30 min 3x/week.</textarea>
+            </div>
+
+            <div class="ai-hint-card">
+              <ion-icon name="sparkles-outline"></ion-icon>
+              <div>
+                <p><strong>AI Voice Entry</strong></p>
+                <p class="muted small">Tap the mic above and have a natural conversation — AI will document Chief Complaint and HPI for you.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3: CLINICAL NOTE -->
+          <div class="step-pane" data-step="3" hidden>
+            <h2 class="step-title">Clinical Note</h2>
+
+            <button class="ref-toggle" onclick="App.toggleRefDrawer()">
+              <ion-icon name="layers-outline"></ion-icon>
+              <span>Reference · Vitals, History Review, CC/HPI</span>
+              <ion-icon name="chevron-down" id="ref-chev"></ion-icon>
+            </button>
+            <div class="ref-drawer" id="ref-drawer" hidden>
+              <div class="ref-section"><h4>Vitals</h4><p class="muted small">BP 128/82 · HR 76 · T 98.4°F · SpO₂ 98% · BMI 23.6</p></div>
+              <div class="ref-section"><h4>Active problems</h4><p class="muted small">Essential HTN · Hyperlipidemia</p></div>
+              <div class="ref-section"><h4>CC &amp; HPI</h4><p class="muted small">Follow-up for HTN. BP controlled on lisinopril. No chest pain, SOB, or dizziness.</p></div>
+            </div>
+
+            <label class="field">
+              <span class="field-label">Template</span>
+              <div class="field-input select">
+                <ion-icon name="document-text-outline"></ion-icon>
+                <select>
+                  <option>SOAP Note</option>
+                  <option>H&amp;P</option>
+                  <option>Office Visit Note</option>
+                  <option>Progress Note</option>
+                  <option>Consultation Note</option>
+                  <option>Procedure Note</option>
+                </select>
+                <ion-icon name="chevron-down"></ion-icon>
+              </div>
+            </label>
+
+            <div class="note-actions-row">
+              <button class="btn btn-secondary" onclick="App.toast('Write Note opened')">
+                <ion-icon name="create-outline"></ion-icon> Write Note
+              </button>
+              <button class="btn btn-primary" onclick="App.toast('Recording session…')">
+                <ion-icon name="mic"></ion-icon> Record Session
+              </button>
+            </div>
+
+            <div class="rte-toolbar">
+              <button><ion-icon name="text-outline"></ion-icon></button>
+              <button><strong>B</strong></button>
+              <button><em>I</em></button>
+              <button><ion-icon name="list-outline"></ion-icon></button>
+              <div class="sep"></div>
+              <button class="ai" onclick="App.toast('AI draft inserted')"><ion-icon name="sparkles-outline"></ion-icon> AI draft</button>
+            </div>
+
+            <div class="note-section"><label class="section-label">Subjective</label>
+              <textarea rows="4">Patient reports improved blood pressure control since last visit. No chest pain, no dyspnea. Taking lisinopril 10 mg daily as prescribed. Denies dizziness.</textarea></div>
+            <div class="note-section"><label class="section-label">Objective</label>
+              <textarea rows="4">BP 128/82, HR 76, RR 16, T 98.4°F. Heart: RRR, no murmurs. Lungs: CTA bilaterally. No edema.</textarea></div>
+            <div class="note-section"><label class="section-label">Assessment</label>
+              <textarea rows="3">Essential hypertension, well-controlled on current regimen.</textarea></div>
+            <div class="note-section"><label class="section-label">Plan</label>
+              <textarea rows="3">Continue lisinopril 10 mg daily. Recheck BP in 3 months. Patient educated on low-sodium diet and regular exercise.</textarea></div>
+          </div>
+
+          <!-- STEP 4: ORDERS & REFERRALS -->
+          <div class="step-pane" data-step="4" hidden>
+            <h2 class="step-title">Orders &amp; Referrals</h2>
+            <p class="muted">Labs, imaging, referrals.</p>
+            <div class="section-head">
+              <h3 class="section-title sm">This visit</h3>
+              <button class="chip-btn"><ion-icon name="add"></ion-icon> Add order</button>
+            </div>
+            <div class="order-list">
+              <div class="order-row">
+                <ion-icon name="flask-outline"></ion-icon>
+                <div><p><strong>Basic metabolic panel</strong></p><p class="muted small">Lab · Routine</p></div>
+                <span class="chip sm chip-info">Ordered</span>
+              </div>
+              <div class="order-row">
+                <ion-icon name="pulse-outline"></ion-icon>
+                <div><p><strong>Lipid panel</strong></p><p class="muted small">Lab · Fasting</p></div>
+                <span class="chip sm chip-info">Ordered</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5: PRESCRIPTIONS -->
+          <div class="step-pane" data-step="5" hidden>
+            <h2 class="step-title">Prescriptions</h2>
+            <p class="muted">New and refill Rx for this visit.</p>
+            <div class="section-head">
+              <h3 class="section-title sm">This visit</h3>
+              <button class="chip-btn"><ion-icon name="add"></ion-icon> New Rx</button>
+            </div>
+            <div class="rx-list">
+              <div class="rx-row">
+                <div class="rx-main"><p class="rx-drug">Lisinopril 10 mg tablet</p><p class="muted small">1 tab PO daily · #30 · 3 refills</p></div>
+                <span class="chip sm chip-info">Refill</span>
+              </div>
+              <div class="rx-row">
+                <div class="rx-main"><p class="rx-drug">Atorvastatin 20 mg tablet</p><p class="muted small">1 tab PO QHS · #30 · 3 refills</p></div>
+                <span class="chip sm chip-info">Refill</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 6: Dx & CPT Codes -->
+          <div class="step-pane" data-step="6" hidden>
+            <h2 class="step-title">Dx &amp; CPT Codes</h2>
+
+            <div class="selected-card">
+              <div class="sc-head">
+                <h3>Selected</h3>
+                <span class="muted small"><span id="icd-count">1</span>/12 ICD · <span id="cpt-count">1</span> CPT</span>
+              </div>
+              <div class="sc-group">
+                <p class="muted small">ICD-10 (order = priority)</p>
+                <div class="chip-row" id="sel-icd">
+                  <span class="chip chip-primary removable"><span class="chip-pos">A</span> I10 · Essential hypertension <ion-icon name="close"></ion-icon></span>
+                </div>
+              </div>
+              <div class="sc-group">
+                <p class="muted small">CPT</p>
+                <div class="chip-row" id="sel-cpt">
+                  <span class="chip chip-primary removable">99213 · Office visit level 3 · ×1 <ion-icon name="close"></ion-icon></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="seg-control" id="codes-tab-seg">
+              <button data-tab="icd" class="active">ICD-10</button>
+              <button data-tab="cpt">CPT</button>
+            </div>
+
+            <div class="search-bar"><ion-icon name="search-outline"></ion-icon><input placeholder="Search codes or descriptions" /></div>
+
+            <div class="sheet-sect-title">
+              <ion-icon name="sparkles-outline" class="ai-icon"></ion-icon>
+              AI suggestions <span class="muted small">based on your note</span>
+              <button class="txt-btn sm" onclick="App.toast('Refreshing…')" style="margin-left:auto;"><ion-icon name="refresh-outline"></ion-icon></button>
+            </div>
+            <ul class="ai-code-list">
+              <li class="added">
+                <span class="code">I10</span>
+                <div class="ac-body">
+                  <p>Essential (primary) hypertension</p>
+                  <p class="muted small">Rationale: BP readings, active problem, med match</p>
+                </div>
+                <span class="conf high">92%</span>
+                <span class="added-lbl">Added</span>
+              </li>
+              <li>
+                <span class="code">E78.5</span>
+                <div class="ac-body">
+                  <p>Hyperlipidemia, unspecified</p>
+                  <p class="muted small">Rationale: atorvastatin on active meds</p>
+                  <button class="family-pill" onclick="App.toast('Opening E78.x family')">E78.x ▾</button>
+                </div>
+                <span class="conf med">78%</span>
+                <button class="add-btn">+ Add</button>
+              </li>
+              <li>
+                <span class="code">Z79.899</span>
+                <div class="ac-body">
+                  <p>Other long-term drug therapy</p>
+                  <p class="muted small">Rationale: multiple chronic meds</p>
+                </div>
+                <span class="conf low">54%</span>
+                <button class="add-btn">+ Add</button>
+              </li>
+            </ul>
+
+            <div class="sheet-sect-title"><ion-icon name="star" class="fav-icon"></ion-icon>Your favorites</div>
+            <ul class="code-list">
+              <li><span class="code">I11.9</span> Hypertensive heart disease <button class="add-btn">+ Add</button></li>
+              <li><span class="code">E11.9</span> Type 2 DM, w/o complications <button class="add-btn">+ Add</button></li>
+            </ul>
+          </div>
+
+          <!-- STEP 7: CHECKOUT -->
+          <div class="step-pane" data-step="7" hidden>
+            <h2 class="step-title">Checkout</h2>
+            <p class="muted">Validate everything before closing the encounter.</p>
+
+            <div class="check-grid">
+              <div class="check-cell ok"><ion-icon name="checkmark-circle"></ion-icon><span>Vitals</span></div>
+              <div class="check-cell ok"><ion-icon name="checkmark-circle"></ion-icon><span>History Review</span></div>
+              <div class="check-cell ok"><ion-icon name="checkmark-circle"></ion-icon><span>CC &amp; HPI</span></div>
+              <div class="check-cell"><ion-icon name="remove-circle-outline"></ion-icon><span>Orders &amp; Referrals <small>(2)</small></span></div>
+              <div class="check-cell"><ion-icon name="remove-circle-outline"></ion-icon><span>Prescriptions <small>(2)</small></span></div>
+              <div class="check-cell warn"><ion-icon name="alert-circle"></ion-icon><span>Clinical Notes · 1 draft</span></div>
+              <div class="check-cell ok"><ion-icon name="checkmark-circle"></ion-icon><span>CPT Codes <small>(1)</small></span></div>
+            </div>
+
+            <div class="alert alert-warn">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              <div>All clinical notes must be signed before closing. 1 unsigned note.</div>
+            </div>
+
+            <div class="summary-card">
+              <h3>Visit summary</h3>
+              <div class="sum-row"><span>Patient</span><strong>Emma Martinez · MRN 102384</strong></div>
+              <div class="sum-row"><span>Provider</span><strong>Dr. James Wilson</strong></div>
+              <div class="sum-row"><span>Duration</span><strong>10:00 AM – 10:34 AM (34 min)</strong></div>
+              <div class="sum-row"><span>Dx</span><strong>I10</strong></div>
+              <div class="sum-row"><span>CPT</span><strong>99213 · ×1</strong></div>
+            </div>
+
+            <button class="btn btn-primary btn-block big" onclick="App.openSheet('sig-sheet')">
+              <ion-icon name="create-outline"></ion-icon> Sign All Notes &amp; Close Encounter
+            </button>
+            <button class="btn btn-ghost btn-block" onclick="App.exitEncounter()">
+              <ion-icon name="arrow-back-outline"></ion-icon> Save &amp; Continue Later
+            </button>
+          </div>
+        </div>
+
+        <footer class="enc-foot">
+          <button class="btn btn-ghost" id="step-prev" onclick="App.stepPrev()"><ion-icon name="arrow-back-outline"></ion-icon> Previous</button>
+          <button class="btn btn-primary" id="step-next" onclick="App.stepNext()">Next <ion-icon name="arrow-forward-outline"></ion-icon></button>
+        </footer>
+      </section>
+
+      <!-- ============ SIGNED NOTE (read-only, with Amendment/Addendum) ============ -->
+      <section class="screen" data-screen="signed-note" hidden>
+        <header class="topbar">
+          <button class="icon-btn" onclick="App.goBack()"><ion-icon name="arrow-back-outline"></ion-icon></button>
+          <h1 class="topbar-title">Clinical Note</h1>
+          <button class="icon-btn" onclick="App.openSheet('note-history-sheet')" title="Version history"><ion-icon name="time-outline"></ion-icon></button>
+        </header>
+        <div class="content">
+          <!-- Version bar (when viewing historical version) -->
+          <div class="version-bar hidden" id="version-bar" hidden>
+            <ion-icon name="eye-outline"></ion-icon>
+            <span>You are viewing <strong>v1 (Original)</strong></span>
+            <button class="txt-btn" onclick="App.viewCurrentVersion()">← Return to current</button>
+          </div>
+
+          <div class="signed-banner">
+            <ion-icon name="checkmark-circle"></ion-icon>
+            <div>
+              <p><strong>Signed</strong> <span class="chip chip-primary sm" id="version-chip">v2 · Current</span></p>
+              <p class="muted small">Dr. James Wilson · Apr 22, 2026 at 10:45 AM</p>
+            </div>
+          </div>
+
+          <!-- Amendment countdown -->
+          <div class="amendment-countdown" id="amendment-countdown">
+            <ion-icon name="time-outline"></ion-icon>
+            Amendment window: <strong>23h 14m</strong> remaining
+          </div>
+
+          <div class="ctx-chip"><div class="avatar avatar-sm">EM</div><div><p class="note-title">Emma Martinez · MRN 102384</p><p class="muted small">SOAP Note · Follow-Up · Hypertension</p></div></div>
+
+          <div class="review-card">
+            <h3>Subjective</h3><p>Patient reports improved blood pressure control since last visit. No chest pain, no dyspnea.</p>
+            <h3>Objective</h3><p>BP 128/82, HR 76, T 98.4°F. Heart: RRR, no murmurs. Lungs: CTA.</p>
+            <h3>Assessment</h3><p>Essential hypertension, well-controlled.</p>
+            <h3>Plan</h3><p>Continue lisinopril 10 mg daily. Recheck BP in 3 months.</p>
+          </div>
+
+          <!-- Addendum block (rendered below main note) -->
+          <div class="addendum-block">
+            <div class="addendum-head">
+              <ion-icon name="add-circle"></ion-icon>
+              <div>
+                <p><strong>Addendum</strong> · Dr. James Wilson</p>
+                <p class="muted small">Apr 22, 2026 at 2:18 PM</p>
+              </div>
+            </div>
+            <p class="addendum-reason">Reason: Lab results received after note was signed</p>
+            <div class="addendum-content">Lab results: BMP within normal limits. Lipid panel: LDL 98, HDL 54, TG 112. No changes to plan needed.</div>
+          </div>
+
+          <div class="review-card">
+            <h3>Codes</h3>
+            <div class="chip-row"><span class="chip chip-primary">I10</span><span class="chip chip-primary">99213</span></div>
+          </div>
+
+          <!-- Amendment / Addendum actions (only for original signer) -->
+          <div class="note-actions-row">
+            <button class="btn btn-warning" onclick="App.openSheet('amendment-sheet')">
+              <ion-icon name="create-outline"></ion-icon> Amendment
+            </button>
+            <button class="btn btn-secondary" onclick="App.openSheet('addendum-sheet')">
+              <ion-icon name="add-circle-outline"></ion-icon> Addendum
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PATIENTS (TAB) ============ -->
+      <section class="screen tab-screen" data-screen="patients" hidden>
+        <header class="topbar-lg">
+          <div class="topbar-row">
+            <h1 class="topbar-h1">Patients</h1>
+            <button class="icon-btn big" onclick="App.toast('New Patient')"><ion-icon name="person-add-outline"></ion-icon></button>
+          </div>
+          <div class="search-bar"><ion-icon name="search-outline"></ion-icon><input placeholder="Search by name, MRN, phone (min 3 chars)…" /></div>
+          <div class="seg-control" id="patients-seg">
+            <button data-filter="all" class="active">All</button>
+            <button data-filter="active">Active</button>
+            <button data-filter="inactive">Inactive</button>
+            <button data-filter="discharged">Discharged</button>
+          </div>
+        </header>
+        <div class="content">
+          <div class="patient-list" id="patient-list"></div>
+        </div>
+      </section>
+
+      <!-- ============ PATIENT DETAIL (MIRRORS WEB 15-TAB CHART) ============ -->
+      <section class="screen" data-screen="patient-detail" hidden>
+        <header class="topbar">
+          <button class="icon-btn" onclick="App.goBack()"><ion-icon name="arrow-back-outline"></ion-icon></button>
+          <h1 class="topbar-title">Patient Details</h1>
+          <button class="icon-btn" onclick="App.toast('Edit patient')"><ion-icon name="pencil-outline"></ion-icon></button>
+        </header>
+
+        <div class="pd-head">
+          <div class="avatar avatar-xl">EM</div>
+          <div class="pd-meta">
+            <h2>Emma Martinez</h2>
+            <p class="muted">F · 34 yrs · MRN 102384</p>
+            <p class="muted small">DOB Jun 14, 1991 · (555) 201-8844</p>
+          </div>
+          <span class="chip sm chip-success">Active</span>
+        </div>
+
+        <!-- Quick actions bar (mobile addition, mirrors web footer) -->
+        <div class="pd-actions">
+          <button onclick="App.toast('Resume / Start visit')"><ion-icon name="play-circle-outline"></ion-icon><span>Start Visit</span></button>
+          <button onclick="App.toast('Message')"><ion-icon name="chatbubble-outline"></ion-icon><span>Message</span></button>
+          <button onclick="App.toast('Call')"><ion-icon name="call-outline"></ion-icon><span>Call</span></button>
+        </div>
+
+        <!-- Horizontal scrollable tab strip (15 tabs mirror web) -->
+        <div class="pd-tabstrip" id="pd-tabstrip"></div>
+
+        <div class="pd-content" id="pd-content"></div>
+      </section>
+
+      <!-- ============ MORE (TAB) ============ -->
+      <section class="screen tab-screen" data-screen="more" hidden>
+        <header class="topbar-lg"><h1 class="topbar-h1">More</h1></header>
+        <div class="content">
+          <div class="profile-card">
+            <div class="avatar avatar-xl" id="profile-initials">JW</div>
+            <div>
+              <h2 id="profile-name">Dr. James Wilson</h2>
+              <p class="muted" id="profile-role-line">Clinician · Main Clinic</p>
+              <p class="muted small" id="profile-email">james@testmd.com</p>
+            </div>
+            <button class="icon-btn"><ion-icon name="chevron-forward"></ion-icon></button>
+          </div>
+
+          <div class="settings-group">
+            <div class="setting-row">
+              <div class="s-ico"><ion-icon name="swap-horizontal-outline"></ion-icon></div>
+              <span>Demo role</span>
+              <div class="theme-seg" id="role-seg">
+                <button data-role="clinician" class="active">Clinician</button>
+                <button data-role="nurse">Nurse</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="setting-row"><div class="s-ico"><ion-icon name="settings-outline"></ion-icon></div><span>Preferences</span><ion-icon name="chevron-forward"></ion-icon></div>
+            <div class="setting-row"><div class="s-ico"><ion-icon name="key-outline"></ion-icon></div><span>Change password</span><ion-icon name="chevron-forward"></ion-icon></div>
+            <div class="setting-row"><div class="s-ico"><ion-icon name="finger-print-outline"></ion-icon></div><span>Biometric sign-in</span><label class="switch"><input type="checkbox" checked /><span class="slider"></span></label></div>
+            <div class="setting-row"><div class="s-ico"><ion-icon name="phone-portrait-outline"></ion-icon></div><span>Trusted devices</span><span class="muted small">2</span><ion-icon name="chevron-forward"></ion-icon></div>
+          </div>
+
+          <div class="settings-group">
+            <div class="setting-row">
+              <div class="s-ico"><ion-icon name="moon-outline"></ion-icon></div>
+              <span>Theme</span>
+              <div class="theme-seg">
+                <button data-theme="light" class="active">Light</button>
+                <button data-theme="dark">Dark</button>
+                <button data-theme="auto">Auto</button>
+              </div>
+            </div>
+            <div class="setting-row"><div class="s-ico"><ion-icon name="notifications-outline"></ion-icon></div><span>Notifications</span><ion-icon name="chevron-forward"></ion-icon></div>
+            <div class="setting-row"><div class="s-ico"><ion-icon name="cloud-offline-outline"></ion-icon></div><span>Simulate offline banner</span><label class="switch"><input type="checkbox" id="offline-toggle" /><span class="slider"></span></label></div>
+          </div>
+
+          <div class="settings-group">
+            <div class="setting-row"><div class="s-ico"><ion-icon name="information-circle-outline"></ion-icon></div><span>About</span><ion-icon name="chevron-forward"></ion-icon></div>
+            <div class="setting-row danger" onclick="App.go('login')"><div class="s-ico"><ion-icon name="log-out-outline"></ion-icon></div><span>Logout</span></div>
+          </div>
+          <p class="version-txt">IMEHR · v1.0.0 (mockup)</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom tab bar: 3 tabs (Notes folded into Patient detail, per web) -->
+    <nav class="tabbar" id="tabbar" hidden>
+      <button data-tab="schedule" class="active"><ion-icon name="calendar-outline"></ion-icon><span>Schedule</span></button>
+      <button data-tab="patients"><ion-icon name="people-outline"></ion-icon><span>Patients</span></button>
+      <button data-tab="more"><ion-icon name="menu-outline"></ion-icon><span>More</span></button>
+    </nav>
+
+    <!-- Signature sheet -->
+    <div class="sheet-back" id="sig-sheet" hidden>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <header class="sheet-head"><h2>Sign All Notes &amp; Close Encounter</h2>
+          <button class="icon-btn" onclick="App.closeSheet('sig-sheet')"><ion-icon name="close-outline"></ion-icon></button>
+        </header>
+        <p class="muted">This will sign all draft notes and close the encounter.</p>
+        <canvas id="sig-canvas" class="sig-canvas" width="600" height="240"></canvas>
+        <div class="sig-actions">
+          <button class="btn btn-ghost" onclick="App.clearSig()"><ion-icon name="refresh-outline"></ion-icon> Clear</button>
+          <button class="btn btn-primary" onclick="App.submitSig()"><ion-icon name="checkmark-circle-outline"></ion-icon> Confirm &amp; sign</button>
+        </div>
+        <p class="muted small center">Secured with biometric verification</p>
+      </div>
+    </div>
+
+    <!-- Encounter menu -->
+    <div class="sheet-back" id="enc-menu-sheet" hidden>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <header class="sheet-head"><h2>Encounter</h2><button class="icon-btn" onclick="App.closeSheet('enc-menu-sheet')"><ion-icon name="close-outline"></ion-icon></button></header>
+        <ul class="menu-list">
+          <li onclick="App.closeSheet('enc-menu-sheet'); App.toast('Saved')"><ion-icon name="save-outline"></ion-icon> Save &amp; exit</li>
+          <li onclick="App.closeSheet('enc-menu-sheet'); App.toast('Transferred')"><ion-icon name="swap-horizontal-outline"></ion-icon> Transfer to other provider</li>
+          <li onclick="App.closeSheet('enc-menu-sheet'); App.go('patient-detail')"><ion-icon name="person-outline"></ion-icon> Patient chart</li>
+          <li onclick="App.closeSheet('enc-menu-sheet'); App.toast('Telehealth link copied')"><ion-icon name="videocam-outline"></ion-icon> Telehealth link</li>
+          <li class="danger" onclick="App.closeSheet('enc-menu-sheet'); App.go('schedule')"><ion-icon name="close-circle-outline"></ion-icon> Discard &amp; exit</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Amendment sheet -->
+    <div class="sheet-back" id="amendment-sheet" hidden>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <header class="sheet-head">
+          <h2>Amendment</h2>
+          <button class="icon-btn" onclick="App.closeSheet('amendment-sheet')"><ion-icon name="close-outline"></ion-icon></button>
+        </header>
+        <p class="muted">Correct an error in this signed note. Creates version 3.</p>
+
+        <label class="field">
+          <span class="field-label">Reason for Amendment <span class="req">*</span></span>
+          <div class="field-input">
+            <ion-icon name="chatbubble-outline"></ion-icon>
+            <input type="text" placeholder="e.g. Corrected Metformin dose from 500mg to 1000mg BID" maxlength="500" />
+          </div>
+        </label>
+
+        <div class="note-section">
+          <label class="section-label">Amended Note Content</label>
+          <textarea rows="6">Patient reports improved blood pressure control since last visit. No chest pain, no dyspnea. [Corrected] Taking lisinopril 20 mg daily (updated from 10 mg).</textarea>
+        </div>
+
+        <div class="alert alert-warn">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <div>Amendment window closes in <strong>23h 14m</strong>. This will create version 3 and replace the current content.</div>
+        </div>
+
+        <footer class="sheet-foot">
+          <div class="sig-actions">
+            <button class="btn btn-ghost" onclick="App.closeSheet('amendment-sheet')">Cancel</button>
+            <button class="btn btn-primary" onclick="App.closeSheet('amendment-sheet'); App.toast('Amendment signed — v3')">
+              <ion-icon name="create-outline"></ion-icon> Sign Amendment
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Addendum sheet -->
+    <div class="sheet-back" id="addendum-sheet" hidden>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <header class="sheet-head">
+          <h2>Addendum</h2>
+          <button class="icon-btn" onclick="App.closeSheet('addendum-sheet')"><ion-icon name="close-outline"></ion-icon></button>
+        </header>
+        <p class="muted">Add information that came in after signing. Appended below the note.</p>
+
+        <label class="field">
+          <span class="field-label">Reason for Addendum <span class="req">*</span></span>
+          <div class="field-input">
+            <ion-icon name="chatbubble-outline"></ion-icon>
+            <input type="text" placeholder="e.g. Lab results received after note was signed" maxlength="500" />
+          </div>
+        </label>
+
+        <div class="note-section">
+          <label class="section-label">Addendum Content</label>
+          <textarea rows="6" placeholder="Additional information to append…"></textarea>
+        </div>
+
+        <footer class="sheet-foot">
+          <div class="sig-actions">
+            <button class="btn btn-ghost" onclick="App.closeSheet('addendum-sheet')">Cancel</button>
+            <button class="btn btn-primary" onclick="App.closeSheet('addendum-sheet'); App.toast('Addendum signed')">
+              <ion-icon name="add-circle-outline"></ion-icon> Sign Addendum
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Note history / timeline sheet -->
+    <div class="sheet-back" id="note-history-sheet" hidden>
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <header class="sheet-head">
+          <h2>Version history</h2>
+          <button class="icon-btn" onclick="App.closeSheet('note-history-sheet')"><ion-icon name="close-outline"></ion-icon></button>
+        </header>
+        <ul class="tl-list">
+          <li class="tl-card current" onclick="App.closeSheet('note-history-sheet'); App.viewCurrentVersion()">
+            <span class="tl-pill current">v2 · CURRENT</span>
+            <div>
+              <p><strong>Apr 22, 2026 · 10:45 AM</strong></p>
+              <p class="muted small">Dr. James Wilson</p>
+              <p class="muted small">Reason: Corrected BP reading typo</p>
+            </div>
+          </li>
+          <li class="tl-card addendum">
+            <span class="tl-pill addendum">+ Addendum</span>
+            <div>
+              <p><strong>Apr 22, 2026 · 2:18 PM</strong></p>
+              <p class="muted small">Dr. James Wilson</p>
+              <p class="muted small">Reason: Lab results received after note was signed</p>
+            </div>
+          </li>
+          <li class="tl-card original" onclick="App.closeSheet('note-history-sheet'); App.viewVersion(1)">
+            <span class="tl-pill original">v1 · Original</span>
+            <div>
+              <p><strong>Apr 22, 2026 · 10:34 AM</strong></p>
+              <p class="muted small">Dr. James Wilson · Original signature</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="success-overlay" id="checkin-overlay" hidden>
+      <div class="success-card">
+        <div class="success-tick"><ion-icon name="checkmark"></ion-icon></div>
+        <h2>Checked In</h2>
+        <p class="muted">Emma Martinez · 9:32 AM</p>
+        <button class="btn btn-primary btn-block" onclick="App.hideCheckIn()">OK</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+  </div>
+
+  <!-- Desktop side panel -->
+  <aside class="aside">
+    <h3>IMEHR Mobile · Clickable Mockup</h3>
+    <p>Static HTML prototype. Mirrors web terminology &amp; flow exactly — only presentation is mobile-adapted.</p>
+
+    <h4>Demo role</h4>
+    <div class="theme-seg" id="role-seg-aside">
+      <button data-role="clinician" class="active">Clinician</button>
+      <button data-role="nurse">Nurse</button>
+    </div>
+
+    <h4>Quick jump</h4>
+    <ul class="jump">
+      <li><a href="#" onclick="App.go('login')">Login</a></li>
+      <li><a href="#" onclick="App.go('otp')">OTP verification</a></li>
+      <li><a href="#" onclick="App.goTab('schedule')">Schedule / Dashboard</a></li>
+      <li><a href="#" onclick="App.go('appt-detail')">Appointment details</a></li>
+      <li><a href="#" onclick="App.openEncounter(0)">Encounter · Vitals</a></li>
+      <li><a href="#" onclick="App.openEncounter(1)">Encounter · History Review</a></li>
+      <li><a href="#" onclick="App.openEncounter(2)">Encounter · CC &amp; HPI</a></li>
+      <li><a href="#" onclick="App.openEncounter(3)">Encounter · Clinical Note</a></li>
+      <li><a href="#" onclick="App.openEncounter(4)">Encounter · Orders &amp; Referrals</a></li>
+      <li><a href="#" onclick="App.openEncounter(5)">Encounter · Prescriptions</a></li>
+      <li><a href="#" onclick="App.openEncounter(6)">Encounter · Dx &amp; CPT Codes</a></li>
+      <li><a href="#" onclick="App.openEncounter(7)">Encounter · Checkout</a></li>
+      <li><a href="#" onclick="App.goTab('patients')">Patients list</a></li>
+      <li><a href="#" onclick="App.go('patient-detail')">Patient chart</a></li>
+      <li><a href="#" onclick="App.openPatientTab('appt-notes')">Patient chart · Appt / Notes</a></li>
+      <li><a href="#" onclick="App.goTab('more')">More</a></li>
+    </ul>
+
+    <h4>Toggle</h4>
+    <button class="aside-btn" onclick="App.toggleTheme()"><ion-icon name="contrast-outline"></ion-icon> Theme</button>
+    <button class="aside-btn" onclick="App.toggleOffline()"><ion-icon name="cloud-offline-outline"></ion-icon> Offline banner</button>
+  </aside>
+</div>
+
+<script src="app.js?v=5"></script>
+</body>
+</html>
