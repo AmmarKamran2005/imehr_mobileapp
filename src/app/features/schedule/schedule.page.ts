@@ -155,13 +155,12 @@ export class SchedulePage implements OnInit {
         case 'start': {
           await this.apptsApi.startVisit(a.appointmentId);
           await this.haptics.medium();
-          await this.router.navigate(['/appointment', a.appointmentId], {
-            queryParams: { startedNow: 1 },
-          });
+          await this.router.navigate(['/encounter', a.appointmentId]);
           break;
         }
         case 'resume': {
-          await this.router.navigate(['/appointment', a.appointmentId]);
+          await this.haptics.light();
+          await this.router.navigate(['/encounter', a.appointmentId]);
           break;
         }
         case 'view': {
@@ -176,7 +175,7 @@ export class SchedulePage implements OnInit {
   }
 
   onResume(a: AppointmentDto): void {
-    void this.router.navigate(['/appointment', a.appointmentId]);
+    void this.router.navigate(['/encounter', a.appointmentId]);
   }
 
   /* ============================================================

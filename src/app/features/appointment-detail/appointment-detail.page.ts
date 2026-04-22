@@ -101,9 +101,7 @@ export class AppointmentDetailPage implements OnInit {
     try {
       await this.api.startVisit(id);
       await this.haptics.medium();
-      await this.toasts.success('Visit started');
-      await this.load();
-      // Phase 3 will navigate to /encounter/:id. For now land on the refreshed detail.
+      await this.router.navigate(['/encounter', id]);
     } catch (e) {
       this.log.warn('AppointmentDetail', 'startVisit failed', e);
       await this.toasts.error('Could not start the visit.');
@@ -113,8 +111,10 @@ export class AppointmentDetailPage implements OnInit {
   }
 
   async resumeVisit(): Promise<void> {
-    // Placeholder until Phase 3 (encounter wizard). Safe toast.
-    await this.toasts.show('Encounter wizard arrives in Phase 3.');
+    const id = this.appointmentId();
+    if (!id) return;
+    await this.haptics.light();
+    await this.router.navigate(['/encounter', id]);
   }
 
   async openTelehealth(): Promise<void> {

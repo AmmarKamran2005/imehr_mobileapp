@@ -1,0 +1,108 @@
+<!-- Encounter topbar — patient chip + menu -->
+<header class="topbar">
+  <button class="icon-btn" (click)="back()" aria-label="Close encounter">
+    <ion-icon name="close-outline"></ion-icon>
+  </button>
+
+  <div class="chip">
+    <span class="avatar">{{ patientInitials() }}</span>
+    <div class="who">
+      <p class="name">{{ appointment()?.patientName ?? 'Patient' }}</p>
+      <p class="meta muted">{{ ctx() }}</p>
+    </div>
+  </div>
+
+  <button class="icon-btn" (click)="openMenu()" aria-label="Encounter menu">
+    <ion-icon name="ellipsis-horizontal"></ion-icon>
+  </button>
+</header>
+
+<!-- Save status -->
+<app-save-strip [status]="saveStatus()" [role]="role()"></app-save-strip>
+
+<!-- Stepper -->
+<app-encounter-stepper
+  [active]="currentStep()"
+  [completed]="completed()"
+  [role]="role()"
+  (pick)="onPickStep($event)"
+></app-encounter-stepper>
+
+<!-- Step body -->
+<ion-content [fullscreen]="true" class="pane-scroll">
+  @if (loading() && !appointment()) {
+    <div class="center">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  } @else {
+    <div class="panes">
+      @switch (currentStep()) {
+        @case (0) { <app-step-vitals></app-step-vitals> }
+        @case (1) {
+          <app-step-placeholder
+            title="History Review"
+            icon="people-outline"
+            phase="Arrives in Phase 4"
+            note="Allergies, medications, problems, family & social history, immunizations — each editable with add/remove."
+          ></app-step-placeholder>
+        }
+        @case (2) {
+          <app-step-placeholder
+            title="CC & HPI"
+            icon="chatbubble-ellipses-outline"
+            phase="Arrives in Phase 4"
+            note="Chief Complaint + HPI free-text fields, with the Unified Voice Bar (AI Scribe) pinned above."
+          ></app-step-placeholder>
+        }
+        @case (3) {
+          <app-step-placeholder
+            title="Clinical Note"
+            icon="document-text-outline"
+            phase="Arrives in Phase 5"
+            note="SOAP editor, Reference drawer, Record Session (AI-drafted note)."
+          ></app-step-placeholder>
+        }
+        @case (4) {
+          <app-step-placeholder
+            title="Orders & Referrals"
+            icon="clipboard-outline"
+            phase="Arrives in Phase 6"
+          ></app-step-placeholder>
+        }
+        @case (5) {
+          <app-step-placeholder
+            title="Prescriptions"
+            icon="medkit-outline"
+            phase="Arrives in Phase 6"
+          ></app-step-placeholder>
+        }
+        @case (6) {
+          <app-step-placeholder
+            title="Dx & CPT Codes"
+            icon="pricetags-outline"
+            phase="Arrives in Phase 6"
+            note="AI suggestions, family overlay, favorites, ICD-10 cap of 12, CPT units inline."
+          ></app-step-placeholder>
+        }
+        @case (7) {
+          <app-step-placeholder
+            title="Checkout"
+            icon="checkmark-circle-outline"
+            phase="Arrives in Phase 7"
+            note="Validation checklist, Sign All Notes & Close Encounter, Save & Continue Later."
+          ></app-step-placeholder>
+        }
+      }
+    </div>
+  }
+</ion-content>
+
+<!-- Bottom nav -->
+<footer class="foot">
+  <button class="btn ghost" (click)="prev()" [disabled]="isFirstStep()">
+    <ion-icon name="arrow-back-outline"></ion-icon> Previous
+  </button>
+  <button class="btn primary" (click)="next()" [disabled]="isLastStep()">
+    Next <ion-icon name="arrow-forward-outline"></ion-icon>
+  </button>
+</footer>

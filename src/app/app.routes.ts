@@ -43,6 +43,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'encounter/:appointmentId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/encounter/encounter.page').then((m) => m.EncounterPage),
+  },
+  {
     // wildcard fallback
     path: '**',
     redirectTo: '/schedule',

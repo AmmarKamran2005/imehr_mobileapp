@@ -1,0 +1,135 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ion-background-color);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 8px;
+  background: var(--ion-item-background);
+  border-bottom: 1px solid var(--imehr-border);
+}
+
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--ion-text-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--imehr-surface-2); }
+
+.chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  background: var(--imehr-primary-50);
+  border-radius: 999px;
+  min-width: 0;
+}
+.chip .avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ion-color-primary), #0891b2);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.chip .who { flex: 1; min-width: 0; }
+.chip .name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip .meta {
+  margin: 0;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.muted { color: var(--imehr-text-2); }
+
+/* ion-content takes the remaining vertical space between stepper and footer */
+.pane-scroll {
+  flex: 1 1 auto;
+  --background: var(--ion-background-color);
+}
+
+.center {
+  min-height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panes { padding-bottom: 12px; }
+
+.foot {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px calc(16px + env(safe-area-inset-bottom));
+  background: var(--ion-item-background);
+  border-top: 1px solid var(--imehr-border);
+  flex-shrink: 0;
+}
+.foot .btn { flex: 1; }
+.foot .btn.ghost { flex: 0 0 auto; padding-left: 16px; padding-right: 16px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border-radius: var(--imehr-radius);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.08s ease;
+}
+.btn ion-icon { font-size: 16px; }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.primary {
+  background: var(--ion-color-primary);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(11, 99, 206, 0.3);
+}
+.btn.ghost {
+  background: var(--imehr-surface-2);
+  color: var(--ion-text-color);
+  border-color: var(--imehr-border);
+}
+
+/* Strip scroll helper — ensures only horizontal (no vertical creep) */
+.strip-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.strip-scroll::-webkit-scrollbar { display: none; }
