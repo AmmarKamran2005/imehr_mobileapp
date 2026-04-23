@@ -1,23 +1,38 @@
 /**
- * /api/dashboard/stats — mirrors DashboardStatsDto server-side.
- * Some cards are hidden for nurse/MA per web CSS gates; we replicate that
- * client-side too.
+ * /api/dashboard/stats — mirrors DashboardStatsDto on the server exactly.
+ * PascalCase keys are converted to camelCase by casing.interceptor, so the
+ * keys below are the shape mobile code sees.
  */
 export interface DashboardStats {
-  today: number;
-  pendingOrders: number;
-  noShow: number;
-  missed: number;
-  // Extra counters the backend may include — we don't surface them yet but
-  // keep the shape open so we don't reject unknown fields.
-  [key: string]: number | undefined;
+  todayAppointments: number;
+  completedToday: number;
+  pendingNotes: number;
+  todayCollections: number;
+  activePatients: number;
+  totalPatients: number;
+  outstandingAr: number;
+  authorizationsExpiringSoon: number;
+  noShowsToday: number;
+  claimsPending: number;
 }
 
-/** Client-side stat card descriptor (for the stats row on Schedule). */
+/**
+ * /api/dashboard/appointments — mirrors DashboardAppointmentsDto. Returns
+ * today's queue (server-side timezone aware) plus aggregate counters.
+ */
+export interface DashboardAppointmentsResponse {
+  appointments: import('./appointment.model').AppointmentDto[];
+  waitingForCheckInCount: number;
+  missingNotesCount: number;
+  requiresSignatureCount: number;
+  totalCount: number;
+}
+
+/** Client-side stat card descriptor for the stats row on Schedule. */
 export interface StatCard {
-  key: 'today' | 'pendingOrders' | 'noShow' | 'missed' | 'triage';
+  key: 'today' | 'completed' | 'pendingNotes' | 'noShow' | 'triage' | 'pendingOrders';
   icon: string;
-  tone: 'primary' | 'info' | 'warning' | 'danger';
+  tone: 'primary' | 'info' | 'warning' | 'danger' | 'success';
   label: string;
   value: number;
 }

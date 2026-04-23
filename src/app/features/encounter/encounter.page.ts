@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, computed, effect, inject } from '@angular
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  IonContent, IonSpinner, IonIcon,
+  IonContent, IonHeader, IonFooter, IonSpinner, IonIcon,
   ActionSheetController,
 } from '@ionic/angular/standalone';
 
@@ -41,7 +41,7 @@ import { VoiceService } from 'src/app/core/services/voice.service';
   standalone: true,
   imports: [
     CommonModule,
-    IonContent, IonSpinner, IonIcon,
+    IonContent, IonHeader, IonFooter, IonSpinner, IonIcon,
     EncounterStepperComponent, SaveStripComponent, VoiceBarComponent,
     StepVitalsComponent, StepHistoryComponent, StepCcHpiComponent,
     StepNoteComponent,

@@ -15,6 +15,7 @@ import { StatCard } from 'src/app/core/models/dashboard.model';
       [class.tone-info]="card().tone === 'info'"
       [class.tone-warn]="card().tone === 'warning'"
       [class.tone-danger]="card().tone === 'danger'"
+      [class.tone-success]="card().tone === 'success'"
       (click)="activated.emit(card())"
     >
       <div class="sc-ico"><ion-icon [name]="card().icon"></ion-icon></div>
@@ -62,8 +63,10 @@ import { StatCard } from 'src/app/core/models/dashboard.model';
     .tone-info    .sc-ico { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
     .tone-warn    .sc-ico { background: rgba(217, 119, 6, 0.12); color: var(--ion-color-warning); }
     .tone-danger  .sc-ico { background: rgba(220, 38, 38, 0.12); color: var(--ion-color-danger); }
+    .tone-success .sc-ico { background: rgba(22, 163, 74, 0.12); color: var(--ion-color-success); }
     .tone-warn .sc-num { color: var(--ion-color-warning); }
     .tone-danger .sc-num { color: var(--ion-color-danger); }
+    .tone-success .sc-num { color: var(--ion-color-success); }
   `],
 })
 export class StatCardComponent {

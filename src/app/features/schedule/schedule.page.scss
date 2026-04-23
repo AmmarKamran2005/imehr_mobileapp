@@ -10,6 +10,15 @@
   margin-top: 4px;
   margin-bottom: 6px;
 }
+.greet-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.greet-left { flex: 1; min-width: 0; }
+.greet-right {
+  padding-top: 6px;
+}
 .greet h1 {
   margin: 2px 0 6px;
   font-size: 24px;
@@ -18,6 +27,27 @@
 }
 .greet .muted { color: var(--imehr-text-2); }
 .greet .small { font-size: 13px; }
+
+/* Realtime status dot */
+.live-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--imehr-border-strong);
+  box-shadow: 0 0 0 3px var(--imehr-surface-2);
+}
+.live-dot.on {
+  background: var(--ion-color-success);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22);
+  animation: live-pulse 2.2s ease-in-out infinite;
+}
+.live-dot.reconnecting {
+  background: var(--ion-color-warning);
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.22);
+  animation: live-pulse 0.9s ease-in-out infinite;
+}
+@keyframes live-pulse { 50% { opacity: 0.55; } }
 
 .offline {
   display: flex;
@@ -49,12 +79,21 @@
   gap: 8px;
   margin: 18px 4px 10px;
 }
+.section-head .sh-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .section-head h2 {
   font-size: 16px;
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.01em;
-  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .count-chip {
   font-size: 11.5px;
@@ -64,6 +103,20 @@
   padding: 2px 8px;
   border-radius: 999px;
 }
+
+/* "Today" quick-return chip */
+.today-btn {
+  border: 1px solid var(--imehr-border);
+  background: var(--ion-item-background);
+  color: var(--ion-color-primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.today-btn:hover { background: var(--imehr-primary-50); }
 
 .list {
   display: flex;

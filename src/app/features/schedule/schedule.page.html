@@ -14,23 +14,35 @@
 
 <ion-content [fullscreen]="true" class="sched">
   <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
-    <ion-refresher-content pullingIcon="chevron-down-outline"
-                           pullingText="Pull to refresh"
-                           refreshingSpinner="crescent"
-                           refreshingText="Updating…"></ion-refresher-content>
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Updating…"></ion-refresher-content>
   </ion-refresher>
 
   <div class="page">
-    <!-- Header: greeting -->
+    <!-- Greeting + role + realtime dot -->
     <section class="greet">
-      <p class="muted small">{{ greeting() }},</p>
-      <h1>{{ user()?.fullName ?? 'IMEHR' }}</h1>
-      @if (user(); as u) {
-        <app-role-badge [role]="u.role"></app-role-badge>
-      }
+      <div class="greet-row">
+        <div class="greet-left">
+          <p class="muted small">{{ greeting() }},</p>
+          <h1>{{ user()?.fullName ?? 'IMEHR' }}</h1>
+          @if (user(); as u) {
+            <app-role-badge [role]="u.role"></app-role-badge>
+          }
+        </div>
+        <div class="greet-right">
+          <span
+            class="live-dot"
+            [class.on]="realtimeConnected() === 'connected'"
+            [class.reconnecting]="realtimeConnected() === 'reconnecting'"
+            [attr.title]="'Live: ' + realtimeConnected()"
+          ></span>
+        </div>
+      </div>
     </section>
 
-    <!-- Offline chip -->
     @if (!online()) {
       <div class="offline">
         <ion-icon name="cloud-offline-outline"></ion-icon>
@@ -44,7 +56,7 @@
       (pick)="onDatePick($event)"
     ></app-date-strip>
 
-    <!-- Active Visit banner — shown only when an in-progress visit exists -->
+    <!-- Active Visit banner -->
     @if (activeVisit(); as av) {
       <app-active-visit-banner
         class="banner-gap"
@@ -54,7 +66,11 @@
     }
 
     <!-- Stats row -->
-    <div class="stats" [class.c3]="statCards().length === 3" [class.c4]="statCards().length === 4">
+    <div
+      class="stats"
+      [class.c3]="statCards().length === 3"
+      [class.c4]="statCards().length === 4"
+    >
       @for (c of statCards(); track c.key) {
         <app-stat-card [card]="c" (activated)="onStatTap($event)"></app-stat-card>
       }
@@ -62,12 +78,16 @@
 
     <!-- Appointments section -->
     <div class="section-head">
-      <h2>{{ isSelectedToday() ? 'Today Appointments' : 'Appointments' }}</h2>
-      <span class="count-chip">{{ appointments().length }}</span>
+      <div class="sh-left">
+        <h2>{{ dateHeading() }} appointments</h2>
+        <span class="count-chip">{{ appointments().length }}</span>
+      </div>
+      @if (!isSelectedToday()) {
+        <button class="today-btn" (click)="jumpToToday()">Today</button>
+      }
     </div>
 
     @if (loading() && appointments().length === 0) {
-      <!-- skeletons -->
       <div class="skel">
         @for (_ of [0, 1, 2, 3]; track $index) {
           <div class="skel-row">
@@ -81,7 +101,6 @@
         }
       </div>
     } @else if (appointments().length === 0) {
-      <!-- empty state -->
       <div class="empty">
         <ion-icon name="calendar-outline"></ion-icon>
         <p class="muted">No appointments on this day.</p>

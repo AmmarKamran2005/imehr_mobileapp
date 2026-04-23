@@ -55,7 +55,9 @@ export class OtpPage implements OnDestroy {
     try {
       await this.auth.verifyOtp(this.code);
       await this.haptics.success();
-      await this.router.navigate(['/biometric-prompt']);
+      // replaceUrl so the OTP step doesn't linger in the back stack once
+      // the user is authenticated.
+      await this.router.navigate(['/biometric-prompt'], { replaceUrl: true });
     } catch (e: unknown) {
       this.log.warn('OtpPage', 'verify failed', e);
       this.errorMsg.set('Incorrect or expired code.');

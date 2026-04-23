@@ -46,7 +46,7 @@ export class LoginPage {
         await this.router.navigate(['/otp']);
       } else {
         await this.haptics.success();
-        await this.router.navigate(['/biometric-prompt']);
+        await this.router.navigate(['/biometric-prompt'], { replaceUrl: true });
       }
     } catch (e: unknown) {
       this.log.warn('LoginPage', 'login failed', e);

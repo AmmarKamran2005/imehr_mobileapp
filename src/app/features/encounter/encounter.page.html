@@ -1,39 +1,48 @@
-<!-- Encounter topbar — patient chip + menu -->
-<header class="topbar">
-  <button class="icon-btn" (click)="back()" aria-label="Close encounter">
-    <ion-icon name="close-outline"></ion-icon>
-  </button>
+<!--
+  Ionic needs the page to expose <ion-header>, <ion-content>, <ion-footer>
+  as direct children of the component host — otherwise the router outlet
+  doesn't layout stepper / voice bar / footer properly and they disappear
+  off-screen on phones. The custom markup inside each of these wrappers
+  keeps our non-Ionic styling.
+-->
 
-  <div class="chip">
-    <span class="avatar">{{ patientInitials() }}</span>
-    <div class="who">
-      <p class="name">{{ appointment()?.patientName ?? 'Patient' }}</p>
-      <p class="meta muted">{{ ctx() }}</p>
+<ion-header class="enc-header" [translucent]="true">
+  <!-- Patient chip row -->
+  <div class="topbar">
+    <button class="icon-btn" (click)="back()" aria-label="Close encounter">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+
+    <div class="chip">
+      <span class="avatar">{{ patientInitials() }}</span>
+      <div class="who">
+        <p class="name">{{ appointment()?.patientName ?? 'Patient' }}</p>
+        <p class="meta muted">{{ ctx() }}</p>
+      </div>
     </div>
+
+    <button class="icon-btn" (click)="openMenu()" aria-label="Encounter menu">
+      <ion-icon name="ellipsis-horizontal"></ion-icon>
+    </button>
   </div>
 
-  <button class="icon-btn" (click)="openMenu()" aria-label="Encounter menu">
-    <ion-icon name="ellipsis-horizontal"></ion-icon>
-  </button>
-</header>
+  <!-- Save status -->
+  <app-save-strip [status]="saveStatus()" [role]="role()"></app-save-strip>
 
-<!-- Save status -->
-<app-save-strip [status]="saveStatus()" [role]="role()"></app-save-strip>
+  <!-- Stepper -->
+  <app-encounter-stepper
+    [active]="currentStep()"
+    [completed]="completed()"
+    [role]="role()"
+    (pick)="onPickStep($event)"
+  ></app-encounter-stepper>
 
-<!-- Stepper -->
-<app-encounter-stepper
-  [active]="currentStep()"
-  [completed]="completed()"
-  [role]="role()"
-  (pick)="onPickStep($event)"
-></app-encounter-stepper>
+  <!-- Unified Voice Bar (AI Scribe) — only on steps 0-2 -->
+  @if (voiceTab(); as tab) {
+    <app-voice-bar [tabKey]="tab"></app-voice-bar>
+  }
+</ion-header>
 
-<!-- Unified Voice Bar (AI Scribe) — only on steps 0-2 -->
-@if (voiceTab(); as tab) {
-  <app-voice-bar [tabKey]="tab"></app-voice-bar>
-}
-
-<!-- Step body -->
 <ion-content [fullscreen]="true" class="pane-scroll">
   @if (loading() && !appointment()) {
     <div class="center">
@@ -54,12 +63,13 @@
   }
 </ion-content>
 
-<!-- Bottom nav -->
-<footer class="foot">
-  <button class="btn ghost" (click)="prev()" [disabled]="isFirstStep()">
-    <ion-icon name="arrow-back-outline"></ion-icon> Previous
-  </button>
-  <button class="btn primary" (click)="next()" [disabled]="isLastStep()">
-    Next <ion-icon name="arrow-forward-outline"></ion-icon>
-  </button>
-</footer>
+<ion-footer class="enc-footer">
+  <div class="foot">
+    <button class="btn ghost" (click)="prev()" [disabled]="isFirstStep()">
+      <ion-icon name="arrow-back-outline"></ion-icon> Previous
+    </button>
+    <button class="btn primary" (click)="next()" [disabled]="isLastStep()">
+      Next <ion-icon name="arrow-forward-outline"></ion-icon>
+    </button>
+  </div>
+</ion-footer>
