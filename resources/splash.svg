@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Splash screen source — 2732×2732 square, centered mark on the
+  gradient background. @capacitor/assets crops / fits this into each
+  Android density bucket.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#0B63CE"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="2732" height="2732" fill="url(#bg)"/>
+
+  <g transform="translate(854 854) scale(1.0)">
+    <!-- 1024×1024 icon foreground centered in 2732×2732 canvas -->
+    <path
+      d="M 224 264
+         L 344 264
+         L 512 528
+         L 680 264
+         L 800 264
+         L 800 760
+         L 696 760
+         L 696 404
+         L 556 624
+         L 468 624
+         L 328 404
+         L 328 760
+         L 224 760
+         Z"
+      fill="#ffffff"
+      stroke="none"/>
+    <path
+      d="M 318 536
+         L 420 536
+         L 450 470
+         L 496 612
+         L 540 432
+         L 576 536
+         L 706 536"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="22"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.95"/>
+  </g>
+
+  <!-- Wordmark below -->
+  <text x="1366" y="2080" text-anchor="middle"
+        font-family="Inter, 'Segoe UI', sans-serif"
+        font-size="128"
+        font-weight="800"
+        letter-spacing="-2"
+        fill="#ffffff">IMEHR</text>
+  <text x="1366" y="2200" text-anchor="middle"
+        font-family="Inter, 'Segoe UI', sans-serif"
+        font-size="52"
+        font-weight="500"
+        letter-spacing="10"
+        fill="#ffffff" fill-opacity="0.78">BY MEDOCS.AI</text>
+</svg>

@@ -1,12 +1,39 @@
 <ion-content [fullscreen]="true" class="login-content">
   <div class="login-wrap">
     <section class="hero">
-      <div class="brand-mark">
-        <ion-icon name="medkit"></ion-icon>
-      </div>
+      <img class="brand-logo" src="assets/brand/logo-mark.svg" alt="medocs.ai" />
       <h1 class="brand-title">IMEHR</h1>
-      <p class="brand-sub">CLINICIAN</p>
+      <p class="brand-sub">by medocs.ai</p>
     </section>
+
+    @if (biometricAvailable()) {
+      <button
+        type="button"
+        class="bio-card"
+        [class.working]="biometricWorking()"
+        (click)="tryBiometric()"
+        [disabled]="biometricWorking()"
+      >
+        <div class="bio-icon">
+          @if (biometricWorking()) {
+            <ion-spinner name="crescent"></ion-spinner>
+          } @else {
+            <ion-icon [name]="biometryIcon()"></ion-icon>
+          }
+        </div>
+        <div class="bio-body">
+          <p class="bio-title">
+            {{ biometricWorking() ? 'Unlocking…' : 'Unlock with ' + biometryLabel() }}
+          </p>
+          <p class="bio-sub">
+            {{ biometricWorking() ? 'Hold on' : 'Tap to continue' }}
+          </p>
+        </div>
+        <ion-icon name="chevron-forward" class="bio-chev"></ion-icon>
+      </button>
+
+      <div class="or-divider"><span>or use password</span></div>
+    }
 
     <form class="form" (ngSubmit)="submit()" #f="ngForm" novalidate>
       <h2>Sign In</h2>

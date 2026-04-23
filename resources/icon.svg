@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  medocs.ai app icon — 1024×1024 source.
+
+  Stylised "M" mark on a blue→teal gradient badge, a pulse line threaded
+  through the valley to signal medical identity.
+
+  Fed through `@capacitor/assets` to produce every Android mipmap /
+  drawable variant automatically.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#0B63CE"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge -->
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="url(#brand)"/>
+
+  <!-- Letter M (two strokes joined by a dropped valley) -->
+  <path
+    d="M 224 264
+       L 344 264
+       L 512 528
+       L 680 264
+       L 800 264
+       L 800 760
+       L 696 760
+       L 696 404
+       L 556 624
+       L 468 624
+       L 328 404
+       L 328 760
+       L 224 760
+       Z"
+    fill="#ffffff"
+    stroke="none"/>
+
+  <!-- Pulse line across the M's valley -->
+  <path
+    d="M 318 536
+       L 420 536
+       L 450 470
+       L 496 612
+       L 540 432
+       L 576 536
+       L 706 536"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.95"/>
+</svg>

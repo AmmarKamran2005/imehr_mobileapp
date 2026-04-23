@@ -1,12 +1,14 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonContent, IonIcon, IonSpinner,
 } from '@ionic/angular/standalone';
+import { BiometryType } from '@aparajita/capacitor-biometric-auth';
 
 import { AuthService } from 'src/app/core/auth/auth.service';
+import { BiometricService } from 'src/app/core/auth/biometric.service';
 import { ToastService } from 'src/app/core/ui/toast.service';
 import { LoggerService } from 'src/app/core/logger/logger.service';
 import { HapticsService } from 'src/app/core/ui/haptics.service';
@@ -18,9 +20,11 @@ import { HapticsService } from 'src/app/core/ui/haptics.service';
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly bio = inject(BiometricService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toasts = inject(ToastService);
   private readonly log = inject(LoggerService);
   private readonly haptics = inject(HapticsService);
@@ -32,6 +36,100 @@ export class LoginPage {
   submitting = signal(false);
   errorMsg = signal<string | null>(null);
 
+  /* ============================================================
+     Biometric quick-login (Option C hybrid)
+     ============================================================ */
+  readonly biometricAvailable = signal<boolean>(false);
+  readonly biometricWorking   = signal<boolean>(false);
+  readonly biometricKind      = signal<BiometryType | null>(null);
+  /** Makes the auto-trigger fire only once per mount. */
+  private autoPrompted = false;
+
+  async ngOnInit(): Promise<void> {
+    // Whenever we land on /login we wipe any stale error banners.
+    this.errorMsg.set(null);
+    // If the router sent us here from an idle/expired session, surface it.
+    const expired = this.route.snapshot.queryParamMap.get('expired');
+    if (expired) {
+      this.errorMsg.set('Signed out for inactivity. Unlock to continue.');
+    }
+
+    const avail = await this.auth.hasBiometricUnlockAvailable();
+    if (avail) {
+      this.biometricAvailable.set(true);
+      this.biometricKind.set(await this.bio.biometryType());
+
+      // Auto-trigger once on first mount so returning users get a
+      // one-tap experience. If they cancel, they stay on the page and
+      // can retry by tapping the card or use the password form below.
+      if (!this.autoPrompted) {
+        this.autoPrompted = true;
+        // Small delay so the page paints before the system dialog opens
+        // — feels much smoother than prompting during initial render.
+        setTimeout(() => void this.tryBiometric(), 350);
+      }
+    }
+  }
+
+  biometryLabel(): string {
+    const k = this.biometricKind();
+    switch (k) {
+      case BiometryType.faceId:
+      case BiometryType.faceAuthentication:
+        return 'Face ID';
+      case BiometryType.touchId:
+      case BiometryType.fingerprintAuthentication:
+        return 'Fingerprint';
+      case BiometryType.irisAuthentication:
+        return 'Iris';
+      default:
+        return 'Biometric';
+    }
+  }
+
+  biometryIcon(): string {
+    const k = this.biometricKind();
+    if (k === BiometryType.faceId || k === BiometryType.faceAuthentication) {
+      return 'scan-outline';   // face silhouette reads well in Ionicons
+    }
+    return 'finger-print-outline';
+  }
+
+  async tryBiometric(): Promise<void> {
+    if (this.biometricWorking()) return;
+    this.biometricWorking.set(true);
+    this.errorMsg.set(null);
+    try {
+      const result = await this.auth.biometricQuickLogin();
+      switch (result) {
+        case 'ok':
+          await this.haptics.success();
+          await this.router.navigate(['/tabs/home'], { replaceUrl: true });
+          return;
+        case 'cancelled':
+          // Silent — user opted out of the prompt; card stays clickable.
+          break;
+        case 'expired':
+          this.biometricAvailable.set(false);
+          this.errorMsg.set('Session expired — please sign in again.');
+          await this.haptics.warning();
+          break;
+        case 'unavailable':
+          this.biometricAvailable.set(false);
+          break;
+        case 'error':
+        default:
+          await this.toasts.error('Could not unlock. Please try again.');
+          break;
+      }
+    } finally {
+      this.biometricWorking.set(false);
+    }
+  }
+
+  /* ============================================================
+     Password path (unchanged)
+     ============================================================ */
   async submit(): Promise<void> {
     this.errorMsg.set(null);
     if (!this.email.trim() || !this.password) {

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- In-app brand mark (no badge background) — for the Login hero. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" aria-label="Medocs.ai mark">
+  <defs>
+    <linearGradient id="lm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#0B63CE"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="152" height="152" rx="34" ry="34" fill="url(#lm)"/>
+  <path
+    d="M 40 124
+       L 40 36
+       L 60 36
+       L 80 76
+       L 100 36
+       L 120 36
+       L 120 124
+       L 105 124
+       L 105 66
+       L 86 104
+       L 74 104
+       L 55 66
+       L 55 124
+       Z"
+    fill="#ffffff"/>
+  <path
+    d="M 50 92
+       L 70 92
+       L 77 80
+       L 85 106
+       L 93 72
+       L 101 92
+       L 118 92"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="4.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.92"/>
+</svg>

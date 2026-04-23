@@ -7,6 +7,7 @@ import { environment } from 'src/environments/environment';
 import { SecureStorageService } from '../storage/secure-storage.service';
 import { LoggerService } from '../logger/logger.service';
 import { InactivityService } from './inactivity.service';
+import { BiometricService } from './biometric.service';
 import { CurrentUser } from '../models/user.model';
 import {
   LoginRequest, LoginResponse,
@@ -37,6 +38,7 @@ export class AuthService {
   private readonly storage = inject(SecureStorageService);
   private readonly log = inject(LoggerService);
   private readonly inactivity = inject(InactivityService);
+  private readonly bio = inject(BiometricService);
 
   // Reactive state
   readonly user = signal<CurrentUser | null>(null);
@@ -69,13 +71,86 @@ export class AuthService {
       return;
     }
 
+    // If the user opted into biometric, DO NOT auto-populate — force every
+    // cold start through the Login page's biometric card so the device
+    // owner has to re-authenticate. HIPAA-friendly and matches banking
+    // apps (Chase, PayPal, MyChart). The tokens stay in SecureStorage so
+    // the biometric quick-login flow can refresh without a password step.
+    if (await this.bio.isEnabledByUser()) {
+      this.log.info('Auth', 'session pending biometric unlock');
+      return;
+    }
+
     this.user.set(stored.user);
     this.token.set(token);
     this.refreshToken.set(refresh);
     this.tokenExpiry.set(expiry ? new Date(expiry) : null);
 
     this.log.info('Auth', 'session restored', { user: stored.user.email });
-    this.inactivity.start(() => this.logout(true));
+    this.inactivity.start(() => this.softLogout());
+  }
+
+  /* ============================================================
+     Biometric quick-login — shown on the Login page whenever the
+     user has biometric enabled and a refresh token sitting in
+     SecureStorage.
+     ============================================================ */
+
+  /**
+   * True when the Login page should render the "Unlock with Face ID /
+   * Fingerprint" card. Reads from SecureStorage directly because the
+   * signals are intentionally empty before unlock.
+   */
+  async hasBiometricUnlockAvailable(): Promise<boolean> {
+    if (!(await this.bio.isEnabledByUser())) return false;
+    const refresh = await this.storage.getSecure('auth:refreshToken');
+    const user = await this.storage.getSecureJSON<StoredAuth>('auth:user');
+    return !!refresh && !!user;
+  }
+
+  /**
+   * Prompts biometric → refreshes the access token → populates signals.
+   * Returns a narrow result so the Login page can react appropriately:
+   *   - 'ok'          → session is live, navigate to /tabs/home
+   *   - 'cancelled'   → user tapped cancel; leave the page as-is
+   *   - 'unavailable' → flag off / no stored refresh token; hide card
+   *   - 'expired'     → refresh call failed (revoked / expired); wipe and
+   *                     ask for password
+   *   - 'error'       → other failure; toast and allow retry
+   */
+  async biometricQuickLogin(): Promise<'ok' | 'cancelled' | 'unavailable' | 'expired' | 'error'> {
+    if (!(await this.hasBiometricUnlockAvailable())) return 'unavailable';
+
+    const ok = await this.bio.authenticate('Unlock IMEHR');
+    if (!ok) return 'cancelled';
+
+    try {
+      const stored  = await this.storage.getSecureJSON<StoredAuth>('auth:user');
+      const refresh = await this.storage.getSecure('auth:refreshToken');
+      const token   = await this.storage.getSecure('auth:token');
+      const expiry  = await this.storage.getSecure('auth:tokenExpiry');
+      if (!stored || !refresh) return 'unavailable';
+
+      // Seed signals so the interceptor has a refresh token on hand.
+      // Force a refresh by marking the access token as expired.
+      this.user.set(stored.user);
+      this.token.set(token ?? '');
+      this.refreshToken.set(refresh);
+      this.tokenExpiry.set(expiry ? new Date(expiry) : new Date(Date.now() - 60_000));
+
+      const refreshed = await this.doRefresh();
+      if (!refreshed) {
+        // doRefresh already called `logout(true)` for us — just surface it.
+        return 'expired';
+      }
+
+      this.inactivity.start(() => this.softLogout());
+      this.log.info('Auth', 'biometric unlock succeeded', stored.user.email);
+      return 'ok';
+    } catch (e) {
+      this.log.warn('Auth', 'biometricQuickLogin error', e);
+      return 'error';
+    }
   }
 
   /* ============================================================
@@ -141,6 +216,14 @@ export class AuthService {
   /* ============================================================
      Logout
      ============================================================ */
+
+  /**
+   * Hard logout — used by the "Log out" button in the More tab and by
+   * `doRefresh` when the server revokes the refresh token. Clears
+   * everything from SecureStorage; the user must go through the full
+   * password + OTP flow next time. The biometric-enabled flag is left
+   * in Preferences as a device preference.
+   */
   async logout(silent = false): Promise<void> {
     const t = this.token();
     try {
@@ -164,6 +247,25 @@ export class AuthService {
       // idle expiry — still route, but without a user-initiated toast
       void this.router.navigate(['/login'], { queryParams: { expired: 1 } });
     }
+  }
+
+  /**
+   * Soft logout — clears the access token + in-memory signals so route
+   * guards deny entry, but intentionally LEAVES the refresh token and
+   * user profile in SecureStorage so the biometric quick-login card on
+   * the Login page can get the user back in with a single biometric
+   * tap. Fired by the InactivityService when the 15-min HIPAA idle
+   * window elapses.
+   */
+  async softLogout(): Promise<void> {
+    await this.storage.removeSecure('auth:token');
+    await this.storage.removeSecure('auth:tokenExpiry');
+    this.user.set(null);
+    this.token.set(null);
+    this.refreshToken.set(null);
+    this.tokenExpiry.set(null);
+    this.inactivity.stop();
+    void this.router.navigate(['/login'], { queryParams: { expired: 1 } });
   }
 
   /* ============================================================
@@ -222,6 +324,9 @@ export class AuthService {
     if (s.tokenExpiry) await this.storage.setSecure('auth:tokenExpiry', s.tokenExpiry);
     await this.storage.setSecureJSON('auth:user', s);
 
-    this.inactivity.start(() => this.logout(true));
+    // Idle logout is SOFT so the biometric card can bring the user back
+    // without a full password + OTP round. A full logout remains available
+    // via the "Log out" button in More.
+    this.inactivity.start(() => this.softLogout());
   }
 }

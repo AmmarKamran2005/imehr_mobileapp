@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Adaptive-icon foreground layer (Android). The launcher crops the outer
+  region, so the mark sits inside the inner 72dp safe zone of a 108dp
+  square. Source is 1024×1024 — we keep the mark within the central
+  ~66% square (centered around 512, 344→680 in both axes).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Letter M -->
+  <path
+    d="M 344 688
+       L 344 336
+       L 432 336
+       L 512 480
+       L 592 336
+       L 680 336
+       L 680 688
+       L 604 688
+       L 604 450
+       L 544 568
+       L 480 568
+       L 420 450
+       L 420 688
+       Z"
+    fill="#ffffff"/>
+
+  <!-- Pulse -->
+  <path
+    d="M 390 562
+       L 452 562
+       L 472 520
+       L 500 612
+       L 528 500
+       L 552 562
+       L 634 562"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.95"/>
+</svg>
