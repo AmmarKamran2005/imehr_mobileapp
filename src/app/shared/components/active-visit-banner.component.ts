@@ -78,7 +78,7 @@ export class ActiveVisitBannerComponent {
   startedTime(): string {
     const a = this.appointment();
     const iso = a.startedAt ?? a.checkedInAt ?? a.startTime;
-    const { hour, mer } = formatTime12(iso);
+    const { hour, mer } = formatTime12(iso, a.timeZoneId);
     return `${hour} ${mer}`;
   }
 }

@@ -78,8 +78,9 @@ export class StepCheckoutComponent {
   readonly visitDuration = computed(() => {
     const a = this.store.appointment();
     if (!a) return '—';
-    const start = formatTime12(a.startTime);
-    const end   = a.endTime ? formatTime12(a.endTime) : null;
+    const zone = a.timeZoneId;
+    const start = formatTime12(a.startTime, zone);
+    const end   = a.endTime ? formatTime12(a.endTime, zone) : null;
     return end ? `${start.hour} ${start.mer} – ${end.hour} ${end.mer}` : `${start.hour} ${start.mer}`;
   });
 

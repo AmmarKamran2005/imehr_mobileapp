@@ -6,6 +6,11 @@
   background: var(--ion-item-background);
   /* Remove the default Ionic toolbar shadow so our custom rows look flat */
   box-shadow: none;
+  /* Our custom <div class="topbar"> inside doesn't inherit Ionic's
+     status-bar inset (no ion-toolbar at the top), so apply it here so
+     the close button / patient chip / menu don't overlap the phone's
+     battery + wifi + time strip. */
+  padding-top: env(safe-area-inset-top, 0);
 }
 .enc-footer {
   background: var(--ion-item-background);

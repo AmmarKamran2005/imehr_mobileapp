@@ -21,6 +21,7 @@ import {
   cloudOfflineOutline, keyOutline, phonePortraitOutline, informationCircleOutline,
   logOutOutline, settingsOutline, personAddOutline, downloadOutline,
   cloudUploadOutline, starOutline, star, pricetagsOutline,
+  homeOutline,
 } from 'ionicons/icons';
 
 import { NetworkService } from './core/network/network.service';
@@ -64,6 +65,7 @@ export class AppComponent implements OnInit {
       cloudOfflineOutline, keyOutline, phonePortraitOutline, informationCircleOutline,
       logOutOutline, settingsOutline, personAddOutline, downloadOutline,
       cloudUploadOutline, starOutline, star, pricetagsOutline,
+      homeOutline,
     });
   }
 

@@ -36,16 +36,25 @@ interface DayCell {
     </div>
   `,
   styles: [`
+    /* Seven chips distributed evenly across the full width, no scroll.
+       Each chip stretches (flex: 1) so the row fills edge-to-edge —
+       removes the right-hand gap that used to show on wider phones. */
     .strip {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin: 14px 0 10px;
-      padding-bottom: 4px;
+      padding: 0 2px 4px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
+    .strip::-webkit-scrollbar { display: none; }
+
     .chip {
-      flex-shrink: 0;
-      min-width: 52px;
-      padding: 10px 6px;
+      flex: 1 1 0;
+      min-width: 44px;
+      padding: 10px 4px;
       background: var(--imehr-surface-2);
       border: 1px solid var(--imehr-border);
       border-radius: var(--imehr-radius);

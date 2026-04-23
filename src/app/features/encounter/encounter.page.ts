@@ -78,8 +78,9 @@ export class EncounterPage implements OnInit, OnDestroy {
   readonly ctx = computed(() => {
     const a = this.appointment();
     if (!a) return '';
-    const t = formatTime12(a.startTime);
-    const parts = [`MRN ${a.patientMrn ?? '—'}`, `${t.hour} ${t.mer}`, a.typeName ?? 'Visit'];
+    const t = formatTime12(a.startTime, a.timeZoneId);
+    const tz = a.timeZoneAbbreviation ? ` ${a.timeZoneAbbreviation}` : '';
+    const parts = [`MRN ${a.patientMrn ?? '—'}`, `${t.hour} ${t.mer}${tz}`, a.typeName ?? 'Visit'];
     return parts.join(' · ');
   });
 

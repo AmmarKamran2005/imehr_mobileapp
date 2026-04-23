@@ -47,10 +47,12 @@ export class AppointmentDetailPage implements OnInit {
   readonly timeRange = computed(() => {
     const d = this.detail();
     if (!d) return '';
-    const start = formatTime12(d.startTime);
-    const end = d.endTime ? formatTime12(d.endTime) : null;
+    const zone = d.timeZoneId;
+    const start = formatTime12(d.startTime, zone);
+    const end = d.endTime ? formatTime12(d.endTime, zone) : null;
+    const abbr = d.timeZoneAbbreviation ? ` ${d.timeZoneAbbreviation}` : '';
     const base = `${start.hour} ${start.mer}`;
-    return end ? `${base} – ${end.hour} ${end.mer}` : base;
+    return (end ? `${base} – ${end.hour} ${end.mer}` : base) + abbr;
   });
 
   async ngOnInit(): Promise<void> {

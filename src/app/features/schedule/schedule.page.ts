@@ -259,23 +259,15 @@ function todayStart(): Date {
   return d;
 }
 
-/** Maps server `DashboardStats` into the 3 or 4 cards the UI renders. */
-function buildStatCards(s: DashboardStats, role: UserRole): StatCard[] {
-  const nurse = isNurseRole(role);
-  const cards: StatCard[] = [
-    { key: 'today',        icon: 'calendar-outline',    tone: 'primary', label: 'Today',         value: s.todayAppointments ?? 0 },
-    { key: 'completed',    icon: 'checkmark-circle-outline', tone: 'success', label: 'Completed', value: s.completedToday ?? 0 },
-    { key: 'pendingNotes', icon: 'document-text-outline', tone: 'info',   label: 'Pending notes', value: s.pendingNotes ?? 0 },
+/**
+ * 3 stat cards for Home — Today / Completed / Pending notes.
+ * Dropped "No show" per product direction (can come back as a drill-down
+ * on the dedicated Schedule page when that lands).
+ */
+function buildStatCards(s: DashboardStats, _role: UserRole): StatCard[] {
+  return [
+    { key: 'today',        icon: 'calendar-outline',         tone: 'primary', label: 'Today',         value: s.todayAppointments ?? 0 },
+    { key: 'completed',    icon: 'checkmark-circle-outline', tone: 'success', label: 'Completed',     value: s.completedToday ?? 0 },
+    { key: 'pendingNotes', icon: 'document-text-outline',    tone: 'info',    label: 'Pending notes', value: s.pendingNotes ?? 0 },
   ];
-  // Nurses/MAs don't see No Show on web — keep mobile consistent.
-  if (!nurse) {
-    cards.push({
-      key: 'noShow',
-      icon: 'alert-circle-outline',
-      tone: 'warning',
-      label: 'No show',
-      value: s.noShowsToday ?? 0,
-    });
-  }
-  return cards;
 }

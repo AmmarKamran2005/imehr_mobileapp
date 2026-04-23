@@ -143,7 +143,10 @@ export class AppointmentCardComponent {
   readonly open    = output<AppointmentDto>();
   readonly action  = output<{ kind: 'check-in' | 'start' | 'resume' | 'view'; appointment: AppointmentDto }>();
 
-  readonly time = computed(() => formatTime12(this.appointment().startTime));
+  readonly time = computed(() => formatTime12(
+    this.appointment().startTime,
+    this.appointment().timeZoneId,
+  ));
   readonly meta = computed(() => statusMeta(this.appointment().status));
 
   typeLabel(): string {

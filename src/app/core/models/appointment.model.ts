@@ -74,6 +74,17 @@ export interface AppointmentDto {
   checkedInAt?: string;
   startedAt?: string;
   completedAt?: string;
+
+  /**
+   * IANA timezone of the appointment's location (e.g. "America/Chicago").
+   * The web serializes appointment DateTimes without a zone indicator and
+   * relies on this field for correct display. Mobile does the same so that
+   * an appointment created at 2:30 PM Chicago time shows as 2:30 PM
+   * regardless of where the viewing device is located.
+   */
+  timeZoneId?: string;
+  /** User-friendly zone label, e.g. "CDT", "EST". */
+  timeZoneAbbreviation?: string;
 }
 
 /** Full patient-chart detail returned by /api/appointments/{id}. */
@@ -118,12 +129,86 @@ export function initialsFromName(name?: string): string {
   return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
-export function formatTime12(iso: string): { hour: string; mer: 'AM' | 'PM' } {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return { hour: '--:--', mer: 'AM' };
-  let h = d.getHours();
-  const m = d.getMinutes().toString().padStart(2, '0');
-  const mer: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM';
-  h = h % 12; if (h === 0) h = 12;
-  return { hour: `${h.toString().padStart(2, '0')}:${m}`, mer };
+/**
+ * Format an ISO datetime as 12-hour wall-clock time. Pass the appointment's
+ * `timeZoneId` to render in that zone regardless of the device zone — this
+ * matches the web and avoids the "2:30 PM appointment shows as 7:30 PM on
+ * my phone" bug caused by the server returning a UTC instant without the Z
+ * suffix, or a local-kind DateTime that JS Date parses ambiguously.
+ *
+ * If `timeZoneId` is absent, falls back to the device's local zone.
+ */
+export function formatTime12(iso: string, timeZoneId?: string): { hour: string; mer: 'AM' | 'PM' } {
+  const d = parseServerIso(iso);
+  if (!d) return { hour: '--:--', mer: 'AM' };
+  try {
+    const opts: Intl.DateTimeFormatOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      ...(timeZoneId ? { timeZone: timeZoneId } : {}),
+    };
+    // en-US gives us the predictable "02:30 PM" shape the UI expects.
+    const parts = new Intl.DateTimeFormat('en-US', opts).formatToParts(d);
+    const hour   = parts.find((p) => p.type === 'hour')?.value ?? '--';
+    const minute = parts.find((p) => p.type === 'minute')?.value ?? '--';
+    const period = (parts.find((p) => p.type === 'dayPeriod')?.value ?? 'AM').toUpperCase();
+    return { hour: `${hour}:${minute}`, mer: period === 'PM' ? 'PM' : 'AM' };
+  } catch {
+    // Invalid zone fallback — device local.
+    let h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const mer: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    return { hour: `${h.toString().padStart(2, '0')}:${m}`, mer };
+  }
+}
+
+/** Format a datetime as a date like "Thu, May 1" in the given zone. */
+export function formatDateShort(iso: string, timeZoneId?: string): string {
+  const d = parseServerIso(iso);
+  if (!d) return '—';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      ...(timeZoneId ? { timeZone: timeZoneId } : {}),
+    }).format(d);
+  } catch {
+    return d.toLocaleDateString();
+  }
+}
+
+/**
+ * Parse what the IMEHR backend serializes.
+ *
+ * Replicates the web's `parseServerDateTime` helper (see
+ * ehr-system/wwwroot/js/core/GlobalBridge.js) which documents the quirk:
+ *
+ *   "Use parseServerDateTime to correctly interpret server UTC times
+ *    (handles missing 'Z' suffix)"
+ *
+ * The server stores appointment times in UTC but System.Text.Json
+ * serializes them WITHOUT a 'Z' suffix. If the mobile app parses them
+ * raw, `new Date("2026-04-23T19:30:00")` interprets the string as LOCAL
+ * time, pushing a 2:30 PM CDT appointment to display as 7:30 PM on a
+ * device in Chicago (the exact bug reported). Appending 'Z' before
+ * parsing forces UTC interpretation, then Intl.DateTimeFormat with the
+ * appointment's `timeZoneId` renders the correct wall-clock time.
+ *
+ * Rules, in order:
+ *   • DateOnly strings (YYYY-MM-DD) → local midnight (Kind.Unspecified)
+ *   • Has 'Z' or numeric offset → parse as-is (already zoned)
+ *   • Otherwise → assume UTC, append 'Z'
+ */
+function parseServerIso(iso: string): Date | null {
+  if (!iso) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const zoned = iso.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(iso);
+  const d = new Date(zoned ? iso : iso + 'Z');
+  return isNaN(d.getTime()) ? null : d;
 }
