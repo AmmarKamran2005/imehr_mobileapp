@@ -17,7 +17,7 @@
 
 .hero {
   text-align: center;
-  padding: 60px 0 20px;
+  padding: 40px 0 16px;
 }
 .brand-logo {
   width: 80px;
@@ -42,79 +42,62 @@
 }
 
 /* ============================================================
-   Biometric quick-login card (Option C — auto-trigger + button)
+   Biometric quick-login — small square button (banking-app style).
+   The actual biometric prompt is the system dialog; this button is
+   just a way to re-trigger it after cancel. The prompt also auto-
+   fires 350 ms after mount from ngOnInit.
    ============================================================ */
-.bio-card {
+.bio-row {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 14px 16px;
-  margin: 8px 0 4px;
-  background: linear-gradient(135deg, var(--ion-color-primary), #0891b2);
-  border: 0;
-  border-radius: var(--imehr-radius);
-  color: #fff;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-  box-shadow: 0 8px 22px rgba(11, 99, 206, 0.25);
-  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  gap: 6px;
+  margin: 22px 0 6px;
+  padding: 14px 0 6px;
+  border-top: 1px solid var(--imehr-border);
 }
-.bio-card:active { transform: scale(0.98); }
-.bio-card:disabled { opacity: 0.85; cursor: wait; }
-
-.bio-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.18);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.bio-icon ion-icon  { font-size: 26px; color: #fff; }
-.bio-icon ion-spinner { --color: #fff; }
-
-.bio-body { flex: 1; min-width: 0; }
-.bio-title {
+.bio-label {
   margin: 0;
-  font-size: 15px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.bio-sub {
-  margin: 2px 0 0;
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.bio-chev {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.or-divider {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 14px 0 6px;
   color: var(--imehr-text-3);
-  font-size: 11.5px;
-  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
-.or-divider::before,
-.or-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--imehr-border);
+
+.bio-sq {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  border: 0;
+  background: linear-gradient(135deg, var(--ion-color-primary), #0891b2);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 22px rgba(11, 99, 206, 0.28);
+  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  margin-top: 2px;
 }
-.or-divider span { padding: 0 6px; }
+.bio-sq:active { transform: scale(0.95); }
+.bio-sq:disabled { opacity: 0.85; cursor: wait; }
+.bio-sq ion-icon { font-size: 30px; }
+.bio-sq ion-spinner { --color: #fff; width: 24px; height: 24px; }
+.bio-sq.working {
+  animation: bio-breathe 1.4s ease-in-out infinite;
+}
+@keyframes bio-breathe {
+  0%, 100% { box-shadow: 0 8px 22px rgba(11, 99, 206, 0.28); }
+  50%      { box-shadow: 0 0 0 10px rgba(11, 99, 206, 0.08), 0 8px 22px rgba(11, 99, 206, 0.28); }
+}
+
+.bio-hint {
+  margin: 2px 0 0;
+  color: var(--imehr-text-3);
+  font-size: 11px;
+}
 
 .form {
   flex: 1;

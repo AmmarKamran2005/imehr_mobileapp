@@ -64,9 +64,10 @@ export class LoginPage implements OnInit {
       // can retry by tapping the card or use the password form below.
       if (!this.autoPrompted) {
         this.autoPrompted = true;
-        // Small delay so the page paints before the system dialog opens
-        // — feels much smoother than prompting during initial render.
-        setTimeout(() => void this.tryBiometric(), 350);
+        // Minimal delay so the page paints a frame before the system
+        // biometric dialog opens on top — feels instant but avoids the
+        // dialog colliding with Angular's route animation.
+        setTimeout(() => void this.tryBiometric(), 120);
       }
     }
   }

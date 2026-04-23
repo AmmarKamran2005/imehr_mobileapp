@@ -6,35 +6,6 @@
       <p class="brand-sub">by medocs.ai</p>
     </section>
 
-    @if (biometricAvailable()) {
-      <button
-        type="button"
-        class="bio-card"
-        [class.working]="biometricWorking()"
-        (click)="tryBiometric()"
-        [disabled]="biometricWorking()"
-      >
-        <div class="bio-icon">
-          @if (biometricWorking()) {
-            <ion-spinner name="crescent"></ion-spinner>
-          } @else {
-            <ion-icon [name]="biometryIcon()"></ion-icon>
-          }
-        </div>
-        <div class="bio-body">
-          <p class="bio-title">
-            {{ biometricWorking() ? 'Unlocking…' : 'Unlock with ' + biometryLabel() }}
-          </p>
-          <p class="bio-sub">
-            {{ biometricWorking() ? 'Hold on' : 'Tap to continue' }}
-          </p>
-        </div>
-        <ion-icon name="chevron-forward" class="bio-chev"></ion-icon>
-      </button>
-
-      <div class="or-divider"><span>or use password</span></div>
-    }
-
     <form class="form" (ngSubmit)="submit()" #f="ngForm" novalidate>
       <h2>Sign In</h2>
       <p class="muted">Internal Medicine EHR</p>
@@ -51,7 +22,6 @@
             [(ngModel)]="email"
             required
             [disabled]="submitting()"
-            placeholder="admin@md.com"
           />
         </div>
       </label>
@@ -92,6 +62,27 @@
 
       <a class="link" routerLink="/forgot-password">Forgot password?</a>
     </form>
+
+    @if (biometricAvailable()) {
+      <div class="bio-row">
+        <p class="bio-label">Quick sign-in</p>
+        <button
+          type="button"
+          class="bio-sq"
+          [class.working]="biometricWorking()"
+          (click)="tryBiometric()"
+          [disabled]="biometricWorking()"
+          [attr.aria-label]="'Sign in with ' + biometryLabel()"
+        >
+          @if (biometricWorking()) {
+            <ion-spinner name="crescent"></ion-spinner>
+          } @else {
+            <ion-icon [name]="biometryIcon()"></ion-icon>
+          }
+        </button>
+        <p class="bio-hint muted-soft tiny">Tap to unlock with {{ biometryLabel() }}</p>
+      </div>
+    }
 
     <footer class="foot">
       <span class="muted-soft tiny">IMEHR · v0.1.0</span>
