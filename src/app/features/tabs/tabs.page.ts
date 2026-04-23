@@ -17,9 +17,13 @@ import {
   template: `
     <ion-tabs>
       <ion-tab-bar slot="bottom">
-        <ion-tab-button tab="schedule">
+        <ion-tab-button tab="home">
           <ion-icon name="home-outline"></ion-icon>
           <ion-label>Home</ion-label>
+        </ion-tab-button>
+        <ion-tab-button tab="schedule">
+          <ion-icon name="calendar-outline"></ion-icon>
+          <ion-label>Schedule</ion-label>
         </ion-tab-button>
         <ion-tab-button tab="patients">
           <ion-icon name="people-outline"></ion-icon>

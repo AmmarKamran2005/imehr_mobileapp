@@ -1,14 +1,15 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
-  IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
+  IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonIcon,
   IonRefresher, IonRefresherContent,
+  IonModal, IonDatetime,
 } from '@ionic/angular/standalone';
 
 import { AuthService } from 'src/app/core/auth/auth.service';
-import { ThemeService } from 'src/app/core/ui/theme.service';
 import { NetworkService } from 'src/app/core/network/network.service';
 import { HapticsService } from 'src/app/core/ui/haptics.service';
 import { ToastService } from 'src/app/core/ui/toast.service';
@@ -17,76 +18,100 @@ import { SignalRService } from 'src/app/core/realtime/signalr.service';
 
 import { DashboardService } from 'src/app/core/services/dashboard.service';
 import { AppointmentsService } from 'src/app/core/services/appointments.service';
+import { ProvidersService, ProviderListItem } from 'src/app/core/services/providers.service';
 
-import { AppointmentDto, AppointmentStatus } from 'src/app/core/models/appointment.model';
-import { DashboardStats, StatCard } from 'src/app/core/models/dashboard.model';
-import { UserRole, isNurseRole } from 'src/app/core/models/user.model';
+import {
+  AppointmentDto, AppointmentStatus,
+} from 'src/app/core/models/appointment.model';
+import { UserRole } from 'src/app/core/models/user.model';
 
-import { RoleBadgeComponent } from 'src/app/shared/components/role-badge.component';
-import { StatCardComponent } from 'src/app/shared/components/stat-card.component';
-import { ActiveVisitBannerComponent } from 'src/app/shared/components/active-visit-banner.component';
-import { DateStripComponent } from 'src/app/shared/components/date-strip.component';
 import { AppointmentCardComponent } from 'src/app/shared/components/appointment-card.component';
 
+type StatusFilterKey = 'scheduled' | 'checkedIn' | 'inProgress' | 'completed' | 'noShow' | 'cancelled';
+
+interface StatusChoice {
+  key: StatusFilterKey;
+  label: string;
+  match: (s: AppointmentStatus) => boolean;
+}
+
+const STATUS_CHOICES: readonly StatusChoice[] = [
+  { key: 'scheduled',  label: 'Scheduled',   match: (s) => s === AppointmentStatus.Scheduled || s === AppointmentStatus.Confirmed },
+  { key: 'checkedIn',  label: 'Checked In',  match: (s) => s === AppointmentStatus.CheckedIn },
+  { key: 'inProgress', label: 'In Progress', match: (s) => s === AppointmentStatus.InProgress },
+  { key: 'completed',  label: 'Completed',   match: (s) => s === AppointmentStatus.Completed },
+  { key: 'noShow',     label: 'No Show',     match: (s) => s === AppointmentStatus.NoShow || s === AppointmentStatus.Missed },
+  { key: 'cancelled',  label: 'Cancelled',   match: (s) => s === AppointmentStatus.Cancelled || s === AppointmentStatus.Rescheduled },
+];
+
+/**
+ * Schedule tab — browse ANY day's appointments. Lightweight list layout
+ * (not a full calendar grid) tuned for phones. Reuses the same
+ * AppointmentCardComponent as the Home tab so row UX stays consistent.
+ *
+ *   - Previous / next day arrows
+ *   - Date pill opens an ion-datetime modal to jump anywhere
+ *   - "Today" pill shown when viewing a non-today date
+ *   - Collapsible filter card: Provider dropdown + Status multi-chip
+ *   - SignalR auto-refresh via ScheduleSignalRService subscription
+ *   - Pull-to-refresh
+ *   - Creating / editing appointments is out of scope (read-only)
+ */
 @Component({
   selector: 'app-schedule',
   standalone: true,
   imports: [
-    CommonModule,
-    IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
+    CommonModule, FormsModule,
+    IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonIcon,
     IonRefresher, IonRefresherContent,
-    RoleBadgeComponent, StatCardComponent,
-    ActiveVisitBannerComponent, DateStripComponent, AppointmentCardComponent,
+    IonModal, IonDatetime,
+    AppointmentCardComponent,
   ],
   templateUrl: './schedule.page.html',
   styleUrls: ['./schedule.page.scss'],
 })
 export class SchedulePage implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
-  private readonly theme = inject(ThemeService);
+  private readonly router = inject(Router);
   private readonly network = inject(NetworkService);
   private readonly haptics = inject(HapticsService);
   private readonly toasts = inject(ToastService);
   private readonly log = inject(LoggerService);
-  private readonly router = inject(Router);
   private readonly signalr = inject(SignalRService);
 
   private readonly dashboard = inject(DashboardService);
   private readonly apptsApi = inject(AppointmentsService);
+  private readonly providersApi = inject(ProvidersService);
 
   readonly user = this.auth.user;
   readonly online = this.network.online;
-
-  // Data
-  readonly selectedDate = signal(todayStart());
-  readonly appointments = signal<AppointmentDto[]>([]);
-  readonly loading = signal<boolean>(false);
-  readonly refreshing = signal<boolean>(false);
-  readonly statCards = signal<StatCard[]>([]);
   readonly realtimeConnected = this.signalr.connectionState;
 
-  // Derived
-  readonly greeting = computed(() => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  });
+  /* ============================================================
+     State
+     ============================================================ */
+  readonly selectedDate = signal<Date>(todayStart());
+  readonly appointments = signal<AppointmentDto[]>([]);
+  readonly loading = signal<boolean>(false);
 
-  readonly activeVisit = computed<AppointmentDto | null>(() =>
-    this.appointments().find((a) => a.status === AppointmentStatus.InProgress) ?? null,
-  );
+  // Filters
+  readonly providers = signal<ProviderListItem[]>([]);
+  readonly providerId = signal<number | null>(null);
+  readonly statusSelection = signal<Set<StatusFilterKey>>(new Set());
+  readonly filtersOpen = signal<boolean>(false);
 
-  readonly isSelectedToday = computed(() =>
+  // Date picker modal
+  readonly datePickerOpen = signal<boolean>(false);
+
+  readonly statusChoices = STATUS_CHOICES;
+
+  /* ============================================================
+     Derived
+     ============================================================ */
+  readonly isToday = computed(() =>
     this.selectedDate().toDateString() === new Date().toDateString(),
   );
 
-  readonly isNurseUser = computed(() => {
-    const r = this.user()?.role;
-    return r != null && isNurseRole(r);
-  });
-
-  // Subtitle under the date header so users see WHICH day they're looking at.
   readonly dateHeading = computed(() => {
     const d = this.selectedDate();
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -95,24 +120,64 @@ export class SchedulePage implements OnInit, OnDestroy {
     if (d.toDateString() === today.toDateString())     return 'Today';
     if (d.toDateString() === tomorrow.toDateString())  return 'Tomorrow';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-    return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric',
+    });
+  });
+
+  readonly dateSubheading = computed(() => {
+    return this.selectedDate().toLocaleDateString(undefined, {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+  });
+
+  readonly activeFilterCount = computed(() => {
+    let n = 0;
+    if (this.providerId() != null) n += 1;
+    if (this.statusSelection().size > 0) n += 1;
+    return n;
+  });
+
+  readonly filteredAppointments = computed(() => {
+    const sel = this.statusSelection();
+    if (sel.size === 0) return this.appointments();
+    return this.appointments().filter((a) =>
+      Array.from(sel).some((key) =>
+        STATUS_CHOICES.find((c) => c.key === key)?.match(a.status) ?? false,
+      ),
+    );
+  });
+
+  /** ISO YYYY-MM-DD for <ion-datetime value>. */
+  readonly datePickerValue = computed(() => {
+    const d = this.selectedDate();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+
+  /** Hide provider filter for therapist-only accounts. */
+  readonly showProviderFilter = computed(() => {
+    const r = this.user()?.role;
+    return r !== UserRole.Therapist;
   });
 
   private sub: Subscription | null = null;
   private realtimeDebounce: number | null = null;
 
   async ngOnInit(): Promise<void> {
-    await this.loadAll();
+    await Promise.all([this.loadProviders(), this.loadAppointments()]);
 
-    // Fire-and-forget — pages subscribe; service handles reconnects.
     void this.signalr.ensureStarted();
-    this.sub = this.signalr.schedule$.subscribe((ev) => {
-      // Debounce bursts: a single appointment edit can emit multiple events.
+    this.sub = this.signalr.schedule$.subscribe(() => {
       if (this.realtimeDebounce != null) clearTimeout(this.realtimeDebounce);
       this.realtimeDebounce = window.setTimeout(() => {
-        this.log.debug('Schedule', 'realtime refresh from', ev.kind);
+        this.log.debug('Schedule', 'realtime refresh');
         void this.loadAppointments();
-        if (ev.kind === 'appointment-changed') void this.loadStats();
       }, 250);
     });
   }
@@ -123,69 +188,111 @@ export class SchedulePage implements OnInit, OnDestroy {
   }
 
   /* ============================================================
-     Data loading
+     Loaders
      ============================================================ */
-  private async loadAll(): Promise<void> {
-    this.loading.set(true);
-    try {
-      await Promise.all([this.loadAppointments(), this.loadStats()]);
-    } finally {
-      this.loading.set(false);
-    }
+  private async loadProviders(): Promise<void> {
+    if (!this.showProviderFilter()) return;
+    const providers = await this.providersApi.list({ activeOnly: true });
+    this.providers.set(providers);
   }
 
-  /**
-   * Picks the right endpoint based on the selected date:
-   *   • today  → /api/dashboard/appointments (server-authoritative "today")
-   *   • other  → /api/appointments?startDate=&endDate=&providerId=
-   */
   private loadAppointments(): Promise<void> {
     return new Promise((resolve) => {
-      const user = this.user();
-      const providerId = user?.providerId ?? undefined;
-      const obs = this.isSelectedToday()
-        ? this.dashboard.todayAppointments(providerId)
-        : this.dashboard.appointmentsForDay(this.selectedDate(), { providerId });
-
-      obs.subscribe((rows) => {
-        // Client-side sort by startTime to guard against unordered responses.
-        const sorted = [...rows].sort((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime));
-        this.appointments.set(sorted);
-        resolve();
-      });
-    });
-  }
-
-  private loadStats(): Promise<void> {
-    return new Promise((resolve) => {
-      this.dashboard.stats().subscribe((s) => {
-        const role = this.user()?.role ?? UserRole.Clinician;
-        this.statCards.set(buildStatCards(s, role));
-        resolve();
-      });
+      this.loading.set(true);
+      const pid = this.providerId() ?? undefined;
+      this.dashboard.appointmentsForDay(this.selectedDate(), { providerId: pid })
+        .subscribe((rows) => {
+          // Sort ascending by start time for a predictable list.
+          const sorted = [...rows].sort((a, b) =>
+            Date.parse(a.startTime) - Date.parse(b.startTime),
+          );
+          this.appointments.set(sorted);
+          this.loading.set(false);
+          resolve();
+        });
     });
   }
 
   async onRefresh(event: Event): Promise<void> {
-    this.refreshing.set(true);
-    try { await this.loadAll(); }
+    try { await this.loadAppointments(); }
     finally {
-      this.refreshing.set(false);
       const target = event.target as HTMLIonRefresherElement | null;
       await target?.complete();
     }
   }
 
   /* ============================================================
-     Date / selection
+     Date navigation
      ============================================================ */
-  onDatePick(d: Date): void {
+  prevDay(): void { this.shiftDay(-1); }
+  nextDay(): void { this.shiftDay(1); }
+
+  private shiftDay(days: number): void {
+    const d = new Date(this.selectedDate());
+    d.setDate(d.getDate() + days);
     this.selectedDate.set(d);
+    void this.haptics.light();
+    void this.loadAppointments();
+  }
+
+  async goToToday(): Promise<void> {
+    if (this.isToday()) return;
+    await this.haptics.light();
+    this.selectedDate.set(todayStart());
+    void this.loadAppointments();
+  }
+
+  openDatePicker(): void { this.datePickerOpen.set(true); }
+  closeDatePicker(): void { this.datePickerOpen.set(false); }
+
+  onDatePicked(event: CustomEvent): void {
+    const value = (event.detail as { value?: string | string[] }).value;
+    const iso = Array.isArray(value) ? value[0] : value;
+    if (!iso) return;
+    // ion-datetime emits "YYYY-MM-DDTHH:mm:ss..." — take only the day part.
+    const datePart = iso.slice(0, 10);
+    const [y, m, d] = datePart.split('-').map(Number);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return;
+    const picked = new Date(y, m - 1, d);
+    this.selectedDate.set(picked);
+    this.datePickerOpen.set(false);
     void this.loadAppointments();
   }
 
   /* ============================================================
-     Appointment actions
+     Filters
+     ============================================================ */
+  toggleFilters(): void {
+    this.filtersOpen.update((v) => !v);
+  }
+
+  onProviderChange(v: string | number | null): void {
+    const id = v == null || v === '' ? null : Number(v);
+    this.providerId.set(Number.isFinite(id as number) ? (id as number) : null);
+    void this.loadAppointments();
+  }
+
+  toggleStatus(key: StatusFilterKey): void {
+    const s = new Set(this.statusSelection());
+    if (s.has(key)) s.delete(key);
+    else s.add(key);
+    this.statusSelection.set(s);
+    // status filter is purely client-side — no re-fetch needed
+  }
+
+  resetFilters(): void {
+    this.providerId.set(null);
+    this.statusSelection.set(new Set());
+    this.filtersOpen.set(false);
+    void this.loadAppointments();
+  }
+
+  isStatusSelected(key: StatusFilterKey): boolean {
+    return this.statusSelection().has(key);
+  }
+
+  /* ============================================================
+     Row actions (reuses Home-tab handlers verbatim)
      ============================================================ */
   openAppointment(a: AppointmentDto): void {
     void this.router.navigate(['/appointment', a.appointmentId]);
@@ -195,61 +302,29 @@ export class SchedulePage implements OnInit, OnDestroy {
     const a = evt.appointment;
     try {
       switch (evt.kind) {
-        case 'check-in': {
+        case 'check-in':
           await this.apptsApi.checkIn(a.appointmentId);
           await this.haptics.light();
           await this.toasts.success(`${a.patientName ?? 'Patient'} checked in`);
           await this.loadAppointments();
           break;
-        }
-        case 'start': {
+        case 'start':
           await this.apptsApi.startVisit(a.appointmentId);
           await this.haptics.medium();
           await this.router.navigate(['/encounter', a.appointmentId]);
           break;
-        }
-        case 'resume': {
+        case 'resume':
           await this.haptics.light();
           await this.router.navigate(['/encounter', a.appointmentId]);
           break;
-        }
-        case 'view': {
+        case 'view':
           await this.router.navigate(['/appointment', a.appointmentId]);
           break;
-        }
       }
     } catch (e) {
       this.log.warn('Schedule', 'row action failed', e);
       await this.toasts.error('Action failed. Try again.');
     }
-  }
-
-  onResume(a: AppointmentDto): void {
-    void this.router.navigate(['/encounter', a.appointmentId]);
-  }
-
-  /* ============================================================
-     Misc
-     ============================================================ */
-  async logout(): Promise<void> {
-    await this.auth.logout();
-  }
-
-  async toggleTheme(): Promise<void> {
-    const order: Array<'light' | 'dark' | 'auto'> = ['light', 'dark', 'auto'];
-    const next = order[(order.indexOf(this.theme.pref()) + 1) % order.length];
-    await this.theme.set(next);
-  }
-
-  onStatTap(card: StatCard): void {
-    void this.toasts.show(`${card.label}: ${card.value}`);
-  }
-
-  async jumpToToday(): Promise<void> {
-    if (this.isSelectedToday()) return;
-    await this.haptics.light();
-    this.selectedDate.set(todayStart());
-    void this.loadAppointments();
   }
 }
 
@@ -257,17 +332,4 @@ function todayStart(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
-}
-
-/**
- * 3 stat cards for Home — Today / Completed / Pending notes.
- * Dropped "No show" per product direction (can come back as a drill-down
- * on the dedicated Schedule page when that lands).
- */
-function buildStatCards(s: DashboardStats, _role: UserRole): StatCard[] {
-  return [
-    { key: 'today',        icon: 'calendar-outline',         tone: 'primary', label: 'Today',         value: s.todayAppointments ?? 0 },
-    { key: 'completed',    icon: 'checkmark-circle-outline', tone: 'success', label: 'Completed',     value: s.completedToday ?? 0 },
-    { key: 'pendingNotes', icon: 'document-text-outline',    tone: 'info',    label: 'Pending notes', value: s.pendingNotes ?? 0 },
-  ];
 }

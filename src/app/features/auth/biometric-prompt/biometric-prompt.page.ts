@@ -63,7 +63,7 @@ export class BiometricPromptPage implements OnInit {
       }
     } finally {
       this.submitting.set(false);
-      await this.router.navigate(['/tabs/schedule'], { replaceUrl: true });
+      await this.router.navigate(['/tabs/home'], { replaceUrl: true });
     }
   }
 
@@ -71,6 +71,6 @@ export class BiometricPromptPage implements OnInit {
     await this.bio.setEnabledByUser(false);
     // replaceUrl so the biometric page isn't in the back stack — hitting
     // system back from Schedule would otherwise return to this prompt.
-    await this.router.navigate(['/tabs/schedule'], { replaceUrl: true });
+    await this.router.navigate(['/tabs/home'], { replaceUrl: true });
   }
 }

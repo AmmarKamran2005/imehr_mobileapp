@@ -6,6 +6,6 @@ import { AuthService } from './auth.service';
 export const noAuthGuard: CanActivateFn = (_route, _state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (auth.isAuthenticated()) return router.createUrlTree(['/schedule']);
+  if (auth.isAuthenticated()) return router.createUrlTree(['/tabs/home']);
   return true;
 };

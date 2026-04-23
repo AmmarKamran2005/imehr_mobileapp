@@ -7,7 +7,8 @@ import { noAuthGuard } from './core/auth/no-auth.guard';
  * ---
  *   /login, /otp, /biometric-prompt        — auth screens, no tab bar
  *   /tabs                                  — bottom tab shell
- *     /tabs/schedule                       — today's dashboard
+ *     /tabs/home                           — dashboard (today + 7-day strip)
+ *     /tabs/schedule                       — browse any date's schedule
  *     /tabs/patients                       — patient list
  *     /tabs/more                           — settings / profile
  *   /appointment/:id                       — full-screen, above tabs
@@ -17,7 +18,7 @@ import { noAuthGuard } from './core/auth/no-auth.guard';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/tabs/schedule',
+    redirectTo: '/tabs/home',
     pathMatch: 'full',
   },
 
@@ -50,7 +51,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/tabs/tabs.page').then((m) => m.TabsPage),
     children: [
-      { path: '', redirectTo: 'schedule', pathMatch: 'full' },
+      { path: '', redirectTo: 'home', pathMatch: 'full' },
+      {
+        path: 'home',
+        loadComponent: () =>
+          import('./features/home/home.page').then((m) => m.HomePage),
+      },
       {
         path: 'schedule',
         loadComponent: () =>
@@ -91,11 +97,14 @@ export const routes: Routes = [
       import('./features/patients/patient-detail.page').then((m) => m.PatientDetailPage),
   },
 
-  /* ---------- Back-compat redirects (old /schedule links still work) ---------- */
-  { path: 'schedule', redirectTo: '/tabs/schedule' },
+  /* ---------- Back-compat redirects ----------
+     Old callers hit /schedule or /tabs/schedule expecting "today's
+     dashboard". That's the Home tab now. Route /home likewise. */
+  { path: 'schedule', redirectTo: '/tabs/home' },
+  { path: 'home',     redirectTo: '/tabs/home' },
   { path: 'patients', redirectTo: '/tabs/patients' },
   { path: 'more',     redirectTo: '/tabs/more' },
 
   /* wildcard */
-  { path: '**', redirectTo: '/tabs/schedule' },
+  { path: '**', redirectTo: '/tabs/home' },
 ];

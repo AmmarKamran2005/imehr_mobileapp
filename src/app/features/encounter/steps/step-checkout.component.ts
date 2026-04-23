@@ -106,7 +106,7 @@ export class StepCheckoutComponent {
   async saveAndExit(): Promise<void> {
     await this.haptics.light();
     await this.toasts.success('Saved · continue later');
-    void this.router.navigate(['/tabs/schedule']);
+    void this.router.navigate(['/tabs/home']);
   }
 
   private async performCheckout(signatureData: string): Promise<void> {
@@ -136,7 +136,7 @@ export class StepCheckoutComponent {
 
       await this.haptics.success();
       await this.toasts.success('Encounter signed & closed');
-      void this.router.navigate(['/tabs/schedule']);
+      void this.router.navigate(['/tabs/home']);
     } catch (e) {
       this.log.warn('Checkout', 'performCheckout failed', e);
       await this.haptics.error();

@@ -1,18 +1,19 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>Home</ion-title>
+    <ion-title>Schedule</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="toggleTheme()" aria-label="Toggle theme">
-        <ion-icon slot="icon-only" name="contrast-outline"></ion-icon>
-      </ion-button>
-      <ion-button (click)="logout()" aria-label="Log out">
-        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
-      </ion-button>
+      @if (realtimeConnected() === 'connected') {
+        <span class="live-dot on" title="Live"></span>
+      } @else if (realtimeConnected() === 'reconnecting') {
+        <span class="live-dot rec" title="Reconnecting"></span>
+      } @else {
+        <span class="live-dot off" title="Offline"></span>
+      }
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="sched">
+<ion-content [fullscreen]="true" class="sb">
   <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
     <ion-refresher-content
       pullingIcon="chevron-down-outline"
@@ -22,70 +23,99 @@
   </ion-refresher>
 
   <div class="page">
-    <!-- Greeting + role + realtime dot -->
-    <section class="greet">
-      <div class="greet-row">
-        <div class="greet-left">
-          <p class="muted small">{{ greeting() }},</p>
-          <h1>{{ user()?.fullName ?? 'IMEHR' }}</h1>
-          @if (user(); as u) {
-            <app-role-badge [role]="u.role"></app-role-badge>
+    <!-- Date navigation row -->
+    <div class="date-nav">
+      <button class="arrow" (click)="prevDay()" aria-label="Previous day">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </button>
+
+      <button class="date-pill" (click)="openDatePicker()" aria-label="Pick date">
+        <ion-icon name="calendar-outline"></ion-icon>
+        <span class="primary">{{ dateHeading() }}</span>
+        <span class="secondary">{{ dateSubheading() }}</span>
+      </button>
+
+      <button class="arrow" (click)="nextDay()" aria-label="Next day">
+        <ion-icon name="chevron-forward-outline"></ion-icon>
+      </button>
+    </div>
+
+    @if (!isToday()) {
+      <button class="today-pill" (click)="goToToday()">
+        <ion-icon name="return-down-back-outline"></ion-icon>
+        Jump to today
+      </button>
+    }
+
+    <!-- Collapsible filter card -->
+    <div class="filter-card" [class.open]="filtersOpen()">
+      <button class="filter-toggle" (click)="toggleFilters()">
+        <ion-icon name="options-outline"></ion-icon>
+        <span>Filters</span>
+        @if (activeFilterCount() > 0) {
+          <span class="filter-count">{{ activeFilterCount() }}</span>
+        }
+        <span class="grow"></span>
+        <ion-icon [name]="filtersOpen() ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+      </button>
+
+      @if (filtersOpen()) {
+        <div class="filter-body">
+          @if (showProviderFilter()) {
+            <label class="field">
+              <span class="field-label">Provider</span>
+              <div class="imehr-field select">
+                <ion-icon name="person-outline"></ion-icon>
+                <select
+                  [ngModel]="providerId()"
+                  (ngModelChange)="onProviderChange($event)"
+                >
+                  <option [ngValue]="null">Any provider</option>
+                  @for (p of providers(); track p.providerId) {
+                    <option [ngValue]="p.providerId">{{ p.fullName }}@if (p.specialty) { · {{ p.specialty }} }</option>
+                  }
+                </select>
+                <ion-icon name="chevron-down-outline"></ion-icon>
+              </div>
+            </label>
           }
+
+          <div class="field">
+            <span class="field-label">Status</span>
+            <div class="status-chips">
+              @for (s of statusChoices; track s.key) {
+                <button
+                  class="chip"
+                  [class.active]="isStatusSelected(s.key)"
+                  (click)="toggleStatus(s.key)"
+                  type="button"
+                >
+                  {{ s.label }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button class="btn ghost" (click)="resetFilters()" [disabled]="activeFilterCount() === 0">
+              Reset
+            </button>
+          </div>
         </div>
-        <div class="greet-right">
-          <span
-            class="live-dot"
-            [class.on]="realtimeConnected() === 'connected'"
-            [class.reconnecting]="realtimeConnected() === 'reconnecting'"
-            [attr.title]="'Live: ' + realtimeConnected()"
-          ></span>
-        </div>
-      </div>
-    </section>
+      }
+    </div>
+
+    <!-- Appointments list -->
+    <div class="section-head">
+      <h2>{{ filteredAppointments().length }} appointment{{ filteredAppointments().length === 1 ? '' : 's' }}</h2>
+    </div>
 
     @if (!online()) {
       <div class="offline">
         <ion-icon name="cloud-offline-outline"></ion-icon>
-        <span>You're offline. Showing cached data if available.</span>
+        <span>Offline — results may be stale.</span>
       </div>
     }
-
-    <!-- Date strip -->
-    <app-date-strip
-      [selected]="selectedDate()"
-      (pick)="onDatePick($event)"
-    ></app-date-strip>
-
-    <!-- Active Visit banner -->
-    @if (activeVisit(); as av) {
-      <app-active-visit-banner
-        class="banner-gap"
-        [appointment]="av"
-        (resume)="onResume($event)"
-      ></app-active-visit-banner>
-    }
-
-    <!-- Stats row -->
-    <div
-      class="stats"
-      [class.c3]="statCards().length === 3"
-      [class.c4]="statCards().length === 4"
-    >
-      @for (c of statCards(); track c.key) {
-        <app-stat-card [card]="c" (activated)="onStatTap($event)"></app-stat-card>
-      }
-    </div>
-
-    <!-- Appointments section -->
-    <div class="section-head">
-      <div class="sh-left">
-        <h2>{{ dateHeading() }} appointments</h2>
-        <span class="count-chip">{{ appointments().length }}</span>
-      </div>
-      @if (!isSelectedToday()) {
-        <button class="today-btn" (click)="jumpToToday()">Today</button>
-      }
-    </div>
 
     @if (loading() && appointments().length === 0) {
       <div class="skel">
@@ -100,14 +130,19 @@
           </div>
         }
       </div>
-    } @else if (appointments().length === 0) {
+    } @else if (filteredAppointments().length === 0) {
       <div class="empty">
         <ion-icon name="calendar-outline"></ion-icon>
-        <p class="muted">No appointments on this day.</p>
+        @if (activeFilterCount() > 0) {
+          <p>No appointments match your filters.</p>
+          <button class="inline-btn" (click)="resetFilters()">Clear filters</button>
+        } @else {
+          <p>No appointments on {{ dateSubheading() }}.</p>
+        }
       </div>
     } @else {
       <div class="list">
-        @for (a of appointments(); track a.appointmentId) {
+        @for (a of filteredAppointments(); track a.appointmentId) {
           <app-appointment-card
             [appointment]="a"
             (open)="openAppointment($event)"
@@ -118,3 +153,24 @@
     }
   </div>
 </ion-content>
+
+<!-- Date picker modal -->
+<ion-modal
+  [isOpen]="datePickerOpen()"
+  (didDismiss)="closeDatePicker()"
+  [initialBreakpoint]="1"
+  [breakpoints]="[0, 1]"
+  class="date-modal"
+>
+  <ng-template>
+    <div class="datetime-wrap">
+      <ion-datetime
+        presentation="date"
+        [value]="datePickerValue()"
+        (ionChange)="onDatePicked($any($event))"
+        showDefaultButtons="false"
+        firstDayOfWeek="1"
+      ></ion-datetime>
+    </div>
+  </ng-template>
+</ion-modal>

@@ -1,0 +1,120 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Home</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleTheme()" aria-label="Toggle theme">
+        <ion-icon slot="icon-only" name="contrast-outline"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()" aria-label="Log out">
+        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="sched">
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Pull to refresh"
+      refreshingSpinner="crescent"
+      refreshingText="Updating…"></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page">
+    <!-- Greeting + role + realtime dot -->
+    <section class="greet">
+      <div class="greet-row">
+        <div class="greet-left">
+          <p class="muted small">{{ greeting() }},</p>
+          <h1>{{ user()?.fullName ?? 'IMEHR' }}</h1>
+          @if (user(); as u) {
+            <app-role-badge [role]="u.role"></app-role-badge>
+          }
+        </div>
+        <div class="greet-right">
+          <span
+            class="live-dot"
+            [class.on]="realtimeConnected() === 'connected'"
+            [class.reconnecting]="realtimeConnected() === 'reconnecting'"
+            [attr.title]="'Live: ' + realtimeConnected()"
+          ></span>
+        </div>
+      </div>
+    </section>
+
+    @if (!online()) {
+      <div class="offline">
+        <ion-icon name="cloud-offline-outline"></ion-icon>
+        <span>You're offline. Showing cached data if available.</span>
+      </div>
+    }
+
+    <!-- Date strip -->
+    <app-date-strip
+      [selected]="selectedDate()"
+      (pick)="onDatePick($event)"
+    ></app-date-strip>
+
+    <!-- Active Visit banner -->
+    @if (activeVisit(); as av) {
+      <app-active-visit-banner
+        class="banner-gap"
+        [appointment]="av"
+        (resume)="onResume($event)"
+      ></app-active-visit-banner>
+    }
+
+    <!-- Stats row -->
+    <div
+      class="stats"
+      [class.c3]="statCards().length === 3"
+      [class.c4]="statCards().length === 4"
+    >
+      @for (c of statCards(); track c.key) {
+        <app-stat-card [card]="c" (activated)="onStatTap($event)"></app-stat-card>
+      }
+    </div>
+
+    <!-- Appointments section -->
+    <div class="section-head">
+      <div class="sh-left">
+        <h2>{{ dateHeading() }} appointments</h2>
+        <span class="count-chip">{{ appointments().length }}</span>
+      </div>
+      @if (!isSelectedToday()) {
+        <button class="today-btn" (click)="jumpToToday()">Today</button>
+      }
+    </div>
+
+    @if (loading() && appointments().length === 0) {
+      <div class="skel">
+        @for (_ of [0, 1, 2, 3]; track $index) {
+          <div class="skel-row">
+            <div class="s-time"></div>
+            <div class="s-body">
+              <div class="s-line w70"></div>
+              <div class="s-line w50"></div>
+            </div>
+            <div class="s-btn"></div>
+          </div>
+        }
+      </div>
+    } @else if (appointments().length === 0) {
+      <div class="empty">
+        <ion-icon name="calendar-outline"></ion-icon>
+        <p class="muted">No appointments on this day.</p>
+      </div>
+    } @else {
+      <div class="list">
+        @for (a of appointments(); track a.appointmentId) {
+          <app-appointment-card
+            [appointment]="a"
+            (open)="openAppointment($event)"
+            (action)="onRowAction($event)"
+          ></app-appointment-card>
+        }
+      </div>
+    }
+  </div>
+</ion-content>
